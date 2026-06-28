@@ -1,0 +1,8 @@
+torch
+transformers
+sentencepiece
+Pillow
+PyMuPDF
+pandas
+scikit-learn
+streamlit

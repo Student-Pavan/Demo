@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AdaptIQ — AI Question Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050710;--bg2:#080b18;--p1:#0c1020;--p2:#10152a;--p3:#161c33;--p4:#1e2540;
+  --rim:rgba(100,120,255,.12);--rim2:rgba(100,120,255,.26);--rim3:rgba(100,120,255,.45);
+  --blue:#5b73ff;--blue2:#7b90ff;--cyan:#00eac8;--cyan2:#00c4aa;
+  --coral:#ff5e7e;--amber:#ffca4a;
+  --tx:#eef0ff;--tx2:#a8b0d0;--tx3:#606890;
+  --r:12px;--r2:18px;--r3:24px;
+  --grad:linear-gradient(135deg,#5b73ff,#00eac8);
+  --sw:260px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{background:var(--bg);color:var(--tx);font-family:'Outfit',sans-serif;overflow-x:hidden;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 55% 38% at 10% 15%,rgba(91,115,255,.08),transparent 65%),
+             radial-gradient(ellipse 40% 45% at 88% 82%,rgba(0,234,200,.06),transparent 60%)}
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(100,120,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(100,120,255,.03) 1px,transparent 1px);
+  background-size:52px 52px}
+button{cursor:pointer;font-family:inherit}
+input,textarea,select{font-family:inherit}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--p4);border-radius:2px}
+
+/* ── SHELL ── */
+.shell{display:flex;min-height:100vh;position:relative;z-index:1}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sw);min-width:var(--sw);height:100vh;position:fixed;top:0;left:0;
+  display:flex;flex-direction:column;background:rgba(8,11,24,.97);
+  border-right:1px solid var(--rim);z-index:300;overflow-y:auto}
+.slogo{padding:24px 20px 20px;border-bottom:1px solid var(--rim);position:relative;flex-shrink:0}
+.slogo::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);opacity:.5}
+.logo-name{font-family:'Outfit',sans-serif;font-weight:900;font-size:1.6rem;letter-spacing:-.05em;
+  background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;display:block}
+.logo-sub{display:flex;align-items:center;gap:6px;font-size:.62rem;font-family:'JetBrains Mono',monospace;
+  color:var(--tx3);letter-spacing:.1em;margin-top:6px;text-transform:uppercase}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);
+  flex-shrink:0;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.snav{padding:12px 10px;flex:1}
+.slbl{font-size:.58rem;font-family:'JetBrains Mono',monospace;color:var(--tx3);
+  letter-spacing:.14em;text-transform:uppercase;padding:0 10px;margin:14px 0 5px}
+.slbl:first-child{margin-top:4px}
+.nb{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:9px;
+  color:var(--tx3);font-size:.87rem;font-weight:600;cursor:pointer;
+  transition:all .17s;border:1px solid transparent;background:none;width:100%;text-align:left;margin-bottom:1px}
+.nb:hover{color:var(--tx2);background:rgba(91,115,255,.05)}
+.nb.active{color:var(--tx);background:rgba(91,115,255,.12);border-color:rgba(91,115,255,.22);box-shadow:inset 3px 0 0 var(--blue)}
+.ni{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+  font-size:.88rem;background:var(--p3);flex-shrink:0;transition:all .17s}
+.nb.active .ni{background:rgba(91,115,255,.2)}
+.nbadge{margin-left:auto;background:var(--blue);color:#fff;font-size:.58rem;font-weight:700;
+  padding:2px 6px;border-radius:20px;font-family:'JetBrains Mono',monospace}
+.sfooter{padding:14px 14px 20px;flex-shrink:0;border-top:1px solid var(--rim)}
+.sbox{background:linear-gradient(135deg,rgba(91,115,255,.07),rgba(0,234,200,.04));
+  border:1px solid var(--rim2);border-radius:var(--r2);padding:13px 14px}
+.sbox-lbl{font-family:'JetBrains Mono',monospace;font-size:.58rem;color:var(--cyan);
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:9px}
+.sr{display:flex;justify-content:space-between;font-size:.77rem;margin-top:5px}
+.sr .k{color:var(--tx3)}.sr .v{font-weight:700;color:var(--tx);font-family:'JetBrains Mono',monospace;font-size:.74rem}
+
+/* ── MAIN ── */
+.main{flex:1;margin-left:var(--sw);min-height:100vh;display:flex;flex-direction:column;min-width:0}
+.topbar{position:sticky;top:0;z-index:200;background:rgba(5,7,16,.9);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--rim);padding:12px 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-shrink:0}
+.tbtitle{font-family:'Outfit',sans-serif;font-weight:700;font-size:.95rem;color:var(--tx)}
+.dpill{display:flex;align-items:center;gap:6px;background:var(--p2);border:1px solid var(--rim);
+  border-radius:50px;padding:5px 12px;font-size:.73rem;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.dpdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dpdot.e{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.dpdot.m{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.dpdot.h{background:var(--coral);box-shadow:0 0 6px var(--coral)}
+.dpdot.a{background:var(--blue);box-shadow:0 0 6px var(--blue)}
+.mobbtn{display:none;background:none;border:none;color:var(--tx);font-size:1.2rem;cursor:pointer;padding:4px}
+
+/* ── PAGES ── */
+.pwrap{flex:1;overflow-y:auto}
+.page{display:none;padding:28px 28px 48px;max-width:1180px;animation:pgin .28s ease}
+.page.active{display:block}
+@keyframes pgin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.ph{margin-bottom:26px}
+.ptag{display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;
+  font-size:.66rem;color:var(--blue2);letter-spacing:.1em;text-transform:uppercase;
+  background:rgba(91,115,255,.07);border:1px solid rgba(91,115,255,.2);border-radius:20px;
+  padding:3px 11px;margin-bottom:9px}
+.ptag::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--blue);animation:blink 2s infinite}
+.ph h1{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(1.4rem,2vw,1.9rem);letter-spacing:-.04em;line-height:1.1}
+.ph p{color:var(--tx2);margin-top:6px;font-size:.9rem;max-width:560px;line-height:1.55}
+.g{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ── CARD ── */
+.card{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));
+  border:1px solid var(--rim);border-radius:var(--r3);padding:22px;position:relative;overflow:hidden;transition:border-color .22s}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(100,120,255,.35),transparent)}
+.card:hover{border-color:var(--rim2)}
+.ctitle{font-family:'Outfit',sans-serif;font-weight:700;font-size:.92rem;margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.csub{color:var(--tx3);font-size:.8rem;margin-bottom:14px}
+
+/* ── UPLOAD ── */
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.cfgwrap{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));
+  border:1px solid var(--rim);border-radius:var(--r3);padding:22px;margin-bottom:14px;position:relative;overflow:hidden}
+.cfgwrap::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);opacity:.4}
+.cfg3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cfg2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.cl{display:block;font-size:.65rem;font-family:'JetBrains Mono',monospace;color:var(--tx3);
+  letter-spacing:.09em;text-transform:uppercase;margin-bottom:7px}
+
+.stxt{width:100%;background:rgba(5,7,16,.85);border:1px solid var(--rim);border-radius:var(--r);
+  padding:13px 15px;color:var(--tx);font-size:.87rem;line-height:1.7;resize:vertical;min-height:170px;
+  outline:none;transition:border-color .2s,box-shadow .2s}
+.stxt:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,115,255,.1)}
+.stxt::placeholder{color:var(--tx3)}
+.ccrow{display:flex;justify-content:flex-end;gap:7px;margin-top:5px}
+.cctag{font-family:'JetBrains Mono',monospace;font-size:.67rem;color:var(--tx3);
+  background:var(--p3);border:1px solid var(--rim);border-radius:20px;padding:2px 8px}
+
+.dz{border:2px dashed var(--rim2);border-radius:var(--r2);padding:28px 14px;text-align:center;
+  cursor:pointer;transition:all .2s;position:relative;background:rgba(91,115,255,.018)}
+.dz:hover,.dz.over{border-color:var(--blue);background:rgba(91,115,255,.055);box-shadow:0 0 24px rgba(91,115,255,.09)}
+.dz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.dzico{font-size:1.8rem;margin-bottom:8px}.dzt{font-weight:700;font-size:.9rem;margin-bottom:3px}
+.dzs{color:var(--tx3);font-size:.77rem}.dzok{display:none;margin-top:7px;color:var(--cyan);font-size:.8rem;font-weight:600}
+
+.srow{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.smpbtn{padding:4px 11px;border-radius:20px;border:1px solid var(--rim);background:var(--p3);
+  color:var(--tx3);font-size:.7rem;font-weight:600;cursor:pointer;transition:all .15s}
+.smpbtn:hover{border-color:var(--blue);color:var(--blue2);background:rgba(91,115,255,.08)}
+
+.ssel{width:100%;background:rgba(5,7,16,.85);border:1px solid var(--rim);border-radius:var(--r);
+  padding:8px 30px 8px 11px;color:var(--tx);font-size:.85rem;font-weight:500;outline:none;
+  cursor:pointer;transition:border-color .18s;appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23606890' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+.ssel:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,115,255,.1)}
+.ssel option{background:#10152a}
+
+/* DIFFICULTY CHIPS — the key UI element */
+.dchips{display:flex;gap:6px;flex-wrap:wrap}
+.dchip{padding:7px 14px;border-radius:50px;border:1px solid var(--rim);background:rgba(5,7,16,.5);
+  color:var(--tx3);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;user-select:none}
+.dchip:hover{color:var(--tx2);border-color:var(--rim2)}
+/* active states — declared AFTER :hover so equal-specificity active wins */
+.dchip[data-d="Easy"].active   { background:rgba(0,234,200,.1); border-color:rgba(0,234,200,.45); color:var(--cyan); box-shadow:0 0 12px rgba(0,234,200,.15); }
+.dchip[data-d="Medium"].active { background:rgba(255,202,74,.1); border-color:rgba(255,202,74,.45); color:var(--amber); box-shadow:0 0 12px rgba(255,202,74,.15); }
+.dchip[data-d="Hard"].active   { background:rgba(255,94,126,.1); border-color:rgba(255,94,126,.45); color:var(--coral); box-shadow:0 0 12px rgba(255,94,126,.15); }
+.dchip[data-d="Adaptive"].active { background:rgba(91,115,255,.12); border-color:rgba(91,115,255,.5); color:var(--blue2); box-shadow:0 0 14px rgba(91,115,255,.2); }
+/* hover on already-active chips — keep active color, just brighten slightly */
+.dchip[data-d="Easy"].active:hover   { color:var(--cyan);  border-color:rgba(0,234,200,.65); }
+.dchip[data-d="Medium"].active:hover { color:var(--amber); border-color:rgba(255,202,74,.65); }
+.dchip[data-d="Hard"].active:hover   { color:var(--coral); border-color:rgba(255,94,126,.65); }
+.dchip[data-d="Adaptive"].active:hover { color:var(--blue2); border-color:rgba(91,115,255,.7); }
+
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--p4);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--blue);border:2px solid var(--bg);box-shadow:0 0 7px rgba(91,115,255,.5)}
+.rv{text-align:right;font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--blue2);margin-top:4px}
+
+.genbtn{width:100%;padding:15px;background:var(--grad);color:#fff;border:none;border-radius:var(--r2);
+  font-family:'Outfit',sans-serif;font-weight:800;font-size:.98rem;cursor:pointer;
+  transition:transform .2s,box-shadow .2s,opacity .2s;
+  box-shadow:0 4px 26px rgba(91,115,255,.28);position:relative;overflow:hidden}
+.genbtn::after{content:'';position:absolute;top:-50%;left:-80%;width:60%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:skewX(-18deg);transition:left .5s}
+.genbtn:hover{transform:translateY(-2px);box-shadow:0 8px 34px rgba(91,115,255,.4)}
+.genbtn:hover::after{left:130%}
+.genbtn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ── QBANK ── */
+.qbar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.fgrp{display:flex;gap:5px}
+.fc{padding:5px 14px;border-radius:50px;border:1px solid var(--rim);background:transparent;
+  color:var(--tx3);font-size:.76rem;font-weight:600;cursor:pointer;transition:all .15s}
+.fc:hover{border-color:var(--rim2);color:var(--tx2)}
+.fc.fa{background:rgba(91,115,255,.09);border-color:rgba(91,115,255,.38);color:var(--blue2)}
+.fc.fe{background:rgba(0,234,200,.07);border-color:rgba(0,234,200,.38);color:var(--cyan)}
+.fc.fm{background:rgba(255,202,74,.07);border-color:rgba(255,202,74,.38);color:var(--amber)}
+.fc.fh{background:rgba(255,94,126,.07);border-color:rgba(255,94,126,.38);color:var(--coral)}
+.qcnt{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.71rem;color:var(--tx3);
+  background:var(--p2);border:1px solid var(--rim);border-radius:20px;padding:3px 10px}
+.sqbtn{padding:5px 14px;background:rgba(91,115,255,.1);border:1px solid rgba(91,115,255,.3);
+  border-radius:50px;color:var(--blue2);font-size:.76rem;font-weight:700;cursor:pointer;transition:all .17s;white-space:nowrap}
+.sqbtn:hover{background:rgba(91,115,255,.2)}
+
+.qlist{display:flex;flex-direction:column;gap:9px}
+.qcard{background:linear-gradient(135deg,rgba(16,21,42,.88),rgba(12,16,32,.93));
+  border:1px solid var(--rim);border-radius:var(--r2);padding:17px 20px;
+  display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;
+  position:relative;overflow:hidden;transition:border-color .2s,transform .18s;animation:qci .25s ease}
+@keyframes qci{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
+.qcard::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.qcard.de::before{background:var(--cyan)}
+.qcard.dm::before{background:var(--amber)}
+.qcard.dh::before{background:var(--coral)}
+.qcard:hover{border-color:var(--rim2);transform:translateX(3px)}
+.qno{font-family:'JetBrains Mono',monospace;font-size:.63rem;color:var(--tx3);margin-bottom:5px;letter-spacing:.06em}
+.qtxt{font-size:.9rem;line-height:1.6;color:var(--tx);margin-bottom:9px;font-weight:500}
+.qmeta{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.qbadge{font-size:.61rem;font-family:'JetBrains Mono',monospace;font-weight:600;padding:2px 7px;border-radius:20px;border:1px solid}
+.be{background:rgba(0,234,200,.08);color:var(--cyan);border-color:rgba(0,234,200,.28)}
+.bm{background:rgba(255,202,74,.08);color:var(--amber);border-color:rgba(255,202,74,.28)}
+.bh{background:rgba(255,94,126,.08);color:var(--coral);border-color:rgba(255,94,126,.28)}
+.bt{background:rgba(91,115,255,.08);color:var(--blue2);border-color:rgba(91,115,255,.28)}
+.btag{font-size:.65rem;color:var(--tx3);background:var(--p3);padding:2px 7px;border-radius:20px;border:1px solid var(--rim)}
+.qacts{display:flex;flex-direction:column;gap:4px}
+.qab{padding:5px 11px;border-radius:7px;border:1px solid var(--rim);background:transparent;
+  color:var(--tx3);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .13s;white-space:nowrap}
+.qab:hover{background:var(--p3);color:var(--tx2);border-color:var(--rim2)}
+.qab.use{background:rgba(91,115,255,.09);color:var(--blue2);border-color:rgba(91,115,255,.28)}
+
+.empty{text-align:center;padding:60px 16px;color:var(--tx3)}
+.empty .ei{font-size:2.6rem;margin-bottom:11px;opacity:.4}
+.empty .et{font-family:'Outfit',sans-serif;font-weight:700;font-size:.98rem;color:var(--tx2);margin-bottom:5px}
+.empty .es{font-size:.83rem}
+
+/* ── QUIZ SETUP ── */
+.qswrap{max-width:540px;margin:0 auto}
+.qscard{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));
+  border:1px solid var(--rim);border-radius:var(--r3);padding:26px;margin-bottom:14px;position:relative;overflow:hidden}
+.qscard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);opacity:.45}
+.qscard h2{font-family:'Outfit',sans-serif;font-weight:700;font-size:1.08rem;margin-bottom:4px}
+.qscard p{color:var(--tx2);font-size:.85rem;margin-bottom:20px}
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:17px}
+.mc{background:rgba(5,7,16,.6);border:2px solid var(--rim);border-radius:var(--r2);padding:16px 13px;
+  cursor:pointer;transition:all .2s;text-align:center}
+.mc:hover{border-color:var(--rim2)}
+.mc.sel{border-color:var(--blue);background:rgba(91,115,255,.08);box-shadow:0 0 18px rgba(91,115,255,.12)}
+.mcico{font-size:1.5rem;margin-bottom:8px}.mctitle{font-family:'Outfit',sans-serif;font-weight:700;font-size:.85rem;margin-bottom:2px}
+.mcdesc{font-size:.7rem;color:var(--tx3);line-height:1.4}
+.o2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:16px}
+.startbtn{width:100%;padding:13px;background:var(--grad);color:#fff;border:none;border-radius:var(--r2);
+  font-family:'Outfit',sans-serif;font-weight:800;font-size:.94rem;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(91,115,255,.28);position:relative;overflow:hidden}
+.startbtn::after{content:'';position:absolute;top:-50%;left:-80%;width:60%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:skewX(-18deg);transition:left .5s}
+.startbtn:hover{transform:translateY(-2px);box-shadow:0 7px 28px rgba(91,115,255,.4)}
+.startbtn:hover::after{left:130%}
+.nqw{text-align:center;color:var(--coral);font-size:.8rem;margin-top:8px;min-height:18px}
+
+/* ── QUIZ ACTIVE ── */
+.qa{display:none}.qa.on{display:block}
+.qsw.hide{display:none}
+.qhdr{display:flex;align-items:center;gap:11px;margin-bottom:18px;flex-wrap:wrap}
+.qinfo{font-size:.84rem;color:var(--tx2);white-space:nowrap}
+.qinfo strong{color:var(--tx);font-family:'JetBrains Mono',monospace}
+.ptrack{flex:1;background:var(--p3);border-radius:3px;height:4px;overflow:hidden;min-width:60px}
+.pfill{height:100%;background:var(--grad);border-radius:3px;transition:width .4s ease}
+.qtmr{font-family:'JetBrains Mono',monospace;font-size:.87rem;font-weight:600;
+  color:var(--cyan);background:rgba(0,234,200,.08);border:1px solid rgba(0,234,200,.22);
+  padding:4px 12px;border-radius:50px;white-space:nowrap;transition:all .3s}
+.qtmr.warn{color:var(--coral);background:rgba(255,94,126,.08);border-color:rgba(255,94,126,.22);animation:twarn 1s ease infinite}
+@keyframes twarn{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+.aban{display:none;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(91,115,255,.07),rgba(0,234,200,.04));
+  border:1px solid rgba(91,115,255,.22);border-radius:var(--r);padding:9px 13px;
+  font-size:.79rem;color:var(--tx2);margin-bottom:15px}
+.aban.on{display:flex}
+.abdot{width:6px;height:6px;border-radius:50%;background:var(--blue);box-shadow:0 0 7px var(--blue);animation:blink 1s infinite;flex-shrink:0}
+
+.qcard-q{background:linear-gradient(135deg,rgba(16,21,42,.94),rgba(8,11,24,.97));
+  border:1px solid var(--rim2);border-radius:var(--r3);padding:26px;margin-bottom:15px;
+  position:relative;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.25)}
+.qcard-q::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad)}
+.qcmeta{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.atag{font-size:.62rem;font-family:'JetBrains Mono',monospace;color:var(--tx3);margin-left:auto}
+.qtext{font-size:1.02rem;font-weight:600;line-height:1.65;color:var(--tx);margin-bottom:20px;letter-spacing:-.01em}
+
+.opts{display:flex;flex-direction:column;gap:7px}
+.opt{display:flex;align-items:center;gap:11px;padding:11px 14px;
+  background:rgba(5,7,16,.7);border:2px solid var(--rim);border-radius:var(--r2);
+  color:var(--tx);font-size:.88rem;font-weight:500;cursor:pointer;transition:all .17s;text-align:left;width:100%}
+.opt:hover:not(:disabled){border-color:var(--blue);background:rgba(91,115,255,.05)}
+.opt.picked{border-color:var(--blue);background:rgba(91,115,255,.08)}
+.opt.correct{border-color:var(--cyan);background:rgba(0,234,200,.07);color:var(--cyan)}
+.opt.wrong{border-color:var(--coral);background:rgba(255,94,126,.06);color:#ff8fa5}
+.opt:disabled{cursor:default}
+.okey{width:24px;height:24px;border-radius:6px;background:var(--p3);display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;flex-shrink:0}
+.opt.correct .okey{background:rgba(0,234,200,.18);color:var(--cyan)}
+.opt.wrong .okey{background:rgba(255,94,126,.14);color:var(--coral)}
+
+.sinp{width:100%;background:rgba(5,7,16,.8);border:2px solid var(--rim);border-radius:var(--r2);
+  padding:11px 14px;color:var(--tx);font-size:.88rem;outline:none;
+  transition:border-color .2s,box-shadow .2s;min-height:70px;resize:vertical;font-family:'Outfit',sans-serif}
+.sinp:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,115,255,.1)}
+
+/* feedback box */
+.fb{display:none;margin-top:12px;padding:13px 15px;border-radius:var(--r);font-size:.85rem;line-height:1.6}
+.fb.on{display:block;animation:fbin .2s ease}
+@keyframes fbin{from{transform:translateY(4px);opacity:0}to{transform:none;opacity:1}}
+.fb.ok{background:rgba(0,234,200,.07);border:1px solid rgba(0,234,200,.22);color:var(--cyan)}
+.fb.no{background:rgba(255,94,126,.06);border:1px solid rgba(255,94,126,.18);color:#ffaabc}
+.fb-ans{display:block;margin-top:7px;font-size:.83rem;color:var(--tx2);font-weight:600}
+.fb-ctx{display:block;margin-top:5px;font-size:.77rem;color:var(--tx3);font-style:italic;
+  line-height:1.5;padding:5px 9px;background:rgba(255,255,255,.025);
+  border-radius:5px;border-left:2px solid rgba(255,255,255,.1)}
+
+.qnav{display:flex;justify-content:flex-end;gap:9px;margin-top:4px}
+.bsub{padding:10px 24px;border:none;border-radius:var(--r);font-family:'Outfit',sans-serif;font-weight:700;font-size:.88rem;
+  cursor:pointer;background:var(--grad);color:#fff;box-shadow:0 3px 16px rgba(91,115,255,.24);transition:all .2s}
+.bsub:hover{transform:translateY(-1px);box-shadow:0 5px 22px rgba(91,115,255,.38)}
+.bsub:disabled{opacity:.42;cursor:not-allowed;transform:none}
+/* NOTE: .bnxt has NO display:none — fully controlled by JS */
+.bnxt{padding:10px 24px;border:none;border-radius:var(--r);font-family:'Outfit',sans-serif;font-weight:700;font-size:.88rem;
+  cursor:pointer;background:var(--grad);color:#fff;box-shadow:0 3px 16px rgba(91,115,255,.24);transition:all .2s}
+.bnxt:hover{transform:translateY(-1px);box-shadow:0 5px 22px rgba(91,115,255,.38)}
+
+/* ── RESULTS ── */
+.rs{display:none}.rs.on{display:block}
+.rcard{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(8,11,24,.97));
+  border:1px solid var(--rim2);border-radius:var(--r3);padding:32px;max-width:520px;
+  margin:0 auto;text-align:center;box-shadow:0 8px 44px rgba(0,0,0,.3);position:relative;overflow:hidden}
+.rcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--grad)}
+.rem{font-size:2.6rem;margin-bottom:12px}.rtitle{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.35rem;letter-spacing:-.03em;margin-bottom:5px}
+.rsub{color:var(--tx2);font-size:.87rem;margin-bottom:20px}
+.rstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.rsbox{background:rgba(5,7,16,.6);border:1px solid var(--rim);border-radius:var(--r2);padding:13px}
+.rsval{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.55rem;margin-bottom:3px}
+.rslbl{font-size:.7rem;color:var(--tx3)}
+.rbtns{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.retrybtn{padding:10px 22px;background:var(--grad);color:#fff;border:none;border-radius:var(--r);
+  font-family:'Outfit',sans-serif;font-weight:700;font-size:.87rem;cursor:pointer;transition:all .2s;box-shadow:0 3px 16px rgba(91,115,255,.24)}
+.retrybtn:hover{transform:translateY(-1px)}
+.anlbtn{padding:10px 22px;background:transparent;border:1px solid var(--rim2);color:var(--tx2);
+  border-radius:var(--r);font-family:'Outfit',sans-serif;font-weight:700;font-size:.87rem;cursor:pointer;transition:all .2s}
+.anlbtn:hover{background:var(--p2);border-color:var(--blue);color:var(--tx)}
+
+/* ── ANALYTICS ── */
+.krow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));
+  border:1px solid var(--rim);border-radius:var(--r2);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s}
+.kpi:hover{border-color:var(--rim2)}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi::after{content:'';position:absolute;bottom:-18px;right:-18px;width:60px;height:60px;border-radius:50%;pointer-events:none;opacity:.22}
+.kpi.kb::before{background:linear-gradient(90deg,var(--blue),transparent)}.kpi.kb::after{background:radial-gradient(circle,var(--blue),transparent)}
+.kpi.kt::before{background:linear-gradient(90deg,var(--cyan),transparent)}.kpi.kt::after{background:radial-gradient(circle,var(--cyan),transparent)}
+.kpi.ky::before{background:linear-gradient(90deg,var(--amber),transparent)}.kpi.ky::after{background:radial-gradient(circle,var(--amber),transparent)}
+.kpi.kc::before{background:linear-gradient(90deg,var(--coral),transparent)}.kpi.kc::after{background:radial-gradient(circle,var(--coral),transparent)}
+.klbl{font-size:.64rem;font-family:'JetBrains Mono',monospace;color:var(--tx3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.kval{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.8rem;letter-spacing:-.04em;line-height:1}
+.kpi.kb .kval{color:var(--blue2)}.kpi.kt .kval{color:var(--cyan)}.kpi.ky .kval{color:var(--amber)}.kpi.kc .kval{color:var(--coral)}
+.kd{font-size:.7rem;color:var(--tx3);margin-top:4px}
+
+.amid{display:grid;grid-template-columns:1.3fr 1fr;gap:15px;margin-bottom:18px}
+.accrd{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));
+  border:1px solid var(--rim);border-radius:var(--r2);padding:19px;position:relative;overflow:hidden}
+.accrd::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--rim2),transparent)}
+.act{font-family:'Outfit',sans-serif;font-weight:700;font-size:.9rem;margin-bottom:2px}
+.acs{color:var(--tx3);font-size:.73rem;margin-bottom:15px}
+.bchart{display:flex;align-items:flex-end;gap:8px;height:120px}
+.bg{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.btk{flex:1;width:100%;background:var(--p3);border-radius:5px 5px 0 0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.bf{border-radius:5px 5px 0 0;transition:height 1.1s cubic-bezier(.22,.68,0,1.2);width:100%}
+.blbl{font-size:.65rem;color:var(--tx3);font-family:'JetBrains Mono',monospace;text-align:center}
+.bval{font-size:.65rem;font-family:'JetBrains Mono',monospace;font-weight:600;text-align:center}
+
+.donut-w{position:relative;width:115px;height:115px;margin:0 auto 12px}
+.dc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dv{font-family:'Outfit',sans-serif;font-weight:800;font-size:1.3rem}.ds{font-size:.63rem;color:var(--tx3)}
+.dleg{display:flex;flex-direction:column;gap:6px;text-align:left;max-width:150px;margin:0 auto}
+.dl{display:flex;align-items:center;gap:6px;font-size:.76rem;color:var(--tx2)}
+.dld{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+
+.hcrd{background:linear-gradient(135deg,rgba(16,21,42,.92),rgba(12,16,32,.96));border:1px solid var(--rim);border-radius:var(--r2);padding:19px;margin-bottom:16px}
+.hlist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.hi{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+  padding:9px 13px;background:rgba(5,7,16,.5);border:1px solid var(--rim);border-radius:var(--r);font-size:.81rem;transition:border-color .13s}
+.hi:hover{border-color:var(--rim2)}
+.hn{font-family:'JetBrains Mono',monospace;font-size:.63rem;color:var(--tx3);width:18px;text-align:center}
+.hq{color:var(--tx);line-height:1.4}.ht{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--tx3);white-space:nowrap}
+.hr{font-size:.68rem;font-weight:700;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.hc{color:var(--cyan)}.hw{color:var(--coral)}
+.dpwrap{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-height:38px}
+.dpn{display:flex;align-items:center;gap:3px}
+.dpb{width:27px;height:27px;border-radius:6px;border:2px solid;display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;background:rgba(0,0,0,.3)}
+.dpa{color:var(--tx3);font-size:.8rem}
+
+/* ── PREVIOUS DASHBOARD TABLE ── */
+.ptools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.psrch{flex:1;min-width:180px;background:rgba(5,7,16,.85);border:1px solid var(--rim);border-radius:10px;
+  padding:8px 11px;color:var(--tx);font-size:.8rem;outline:none;transition:border-color .16s,box-shadow .16s}
+.psrch:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(91,115,255,.1)}
+.pddl{background:rgba(5,7,16,.85);border:1px solid var(--rim);border-radius:10px;padding:8px 10px;
+  color:var(--tx2);font-size:.78rem;outline:none}
+.history-table-wrap{margin-top:12px;border:1px solid var(--rim);border-radius:12px;overflow:auto;max-height:420px}
+.history-table{width:100%;border-collapse:collapse;min-width:760px;background:rgba(5,7,16,.45)}
+.history-table thead th{position:sticky;top:0;z-index:2;background:rgba(16,21,42,.96);border-bottom:1px solid var(--rim2);
+  color:var(--tx3);font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;
+  font-weight:600;text-align:left;padding:10px 11px;white-space:nowrap}
+.history-table td{padding:10px 11px;border-bottom:1px solid rgba(100,120,255,.12);font-size:.79rem;color:var(--tx2);vertical-align:middle}
+.history-table tbody tr:nth-child(odd){background:rgba(255,255,255,.01)}
+.history-table tbody tr:hover{background:rgba(91,115,255,.06)}
+.hid{font-family:'JetBrains Mono',monospace;color:var(--blue2);font-size:.72rem}
+.hscore{font-family:'JetBrains Mono',monospace;color:var(--tx);font-size:.74rem}
+.hmode{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;border:1px solid var(--rim2);
+  background:rgba(91,115,255,.08);color:var(--blue2);font-size:.69rem;font-weight:700}
+.hinpt{font-size:.72rem;color:var(--tx3);font-family:'JetBrains Mono',monospace}
+.hdate{font-size:.71rem;color:var(--tx3);font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.hpc{display:flex;align-items:center;gap:8px}
+.hbar{flex:1;min-width:90px;height:6px;background:var(--p3);border-radius:999px;overflow:hidden}
+.hfill{height:100%;background:var(--grad);border-radius:999px}
+.hpctxt{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--tx2);min-width:36px;text-align:right}
+.pempty{color:var(--tx3);text-align:center;padding:16px !important;font-size:.8rem}
+
+/* ── TOASTS ── */
+.twrap{position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{background:rgba(16,21,42,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid var(--rim2);border-radius:var(--r);padding:10px 14px;font-size:.82rem;color:var(--tx);
+  min-width:200px;max-width:280px;animation:tin .28s cubic-bezier(.22,.68,0,1.2);
+  box-shadow:0 8px 26px rgba(0,0,0,.35);display:flex;align-items:center;gap:7px;pointer-events:all}
+.toast.success{border-left:3px solid var(--cyan)}.toast.info{border-left:3px solid var(--blue)}.toast.warning{border-left:3px solid var(--amber)}
+@keyframes tin{from{transform:translateX(20px) scale(.96);opacity:0}to{transform:none;opacity:1}}
+
+/* ── RESPONSIVE ── */
+.sovl{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:290}
+.sovl.on{display:block}
+@media(max-width:1050px){.krow{grid-template-columns:repeat(2,1fr)}.amid{grid-template-columns:1fr}}
+@media(max-width:860px){
+  :root{--sw:0px}
+  .sidebar{width:260px;min-width:260px;transform:translateX(-100%);transition:transform .3s ease}
+  .sidebar.on{transform:translateX(0)}.main{margin-left:0}.mobbtn{display:block}
+  .twocol,.cfg3,.o2{grid-template-columns:1fr}.cfg2{grid-template-columns:1fr}.mgrid{grid-template-columns:1fr}
+  .qcard-q{padding:18px}.krow{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){
+  .page{padding:16px 14px 36px}.topbar{padding:11px 16px}
+  .hi{grid-template-columns:1fr auto}.hn,.ht{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="slogo">
+    <span class="logo-name">AdaptIQ</span>
+    <div class="logo-sub"><div class="ldot"></div>AI-POWERED · ADAPTIVE</div>
+  </div>
+  <nav class="snav">
+    <div class="slbl">// workspace</div>
+    <button class="nb active" onclick="goPage('upload')"><div class="ni">📄</div>Upload &amp; Generate</button>
+    <button class="nb" onclick="goPage('qbank')"><div class="ni">🗂️</div>Question Bank<span class="nbadge" id="nb-cnt">0</span></button>
+    <div class="slbl">// assessment</div>
+    <button class="nb" onclick="goPage('quiz')"><div class="ni">🎯</div>Take Quiz</button>
+    <button class="nb" onclick="goPage('analytics')"><div class="ni">📊</div>Analytics</button>
+    <button class="nb" onclick="goPage('previous')"><div class="ni">🕘</div>Previous Dashboard</button>
+  </nav>
+  <div class="sfooter">
+    <div class="sbox">
+      <div class="sbox-lbl">// session stats</div>
+      <div class="sr"><span class="k">Questions</span><span class="v" id="ss-q">0</span></div>
+      <div class="sr"><span class="k">Answered</span><span class="v" id="ss-a">0</span></div>
+      <div class="sr"><span class="k">Accuracy</span><span class="v" id="ss-acc">—</span></div>
+      <div class="sr"><span class="k">Quizzes</span><span class="v" id="ss-qz">0</span></div>
+    </div>
+  </div>
+</aside>
+<div class="sovl" id="sovl" onclick="closeSidebar()"></div>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:11px">
+      <button class="mobbtn" onclick="openSidebar()">☰</button>
+      <div class="tbtitle" id="tbtitle">Upload &amp; Generate Questions</div>
+    </div>
+    <div class="dpill"><div class="dpdot a" id="dpd"></div><span id="dlbl" style="font-size:.73rem;font-family:'JetBrains Mono',monospace">Adaptive</span></div>
+  </header>
+
+  <div class="pwrap">
+
+    <!-- UPLOAD PAGE -->
+    <div class="page active" id="page-upload">
+      <div class="ph">
+        <div class="ptag">NLP + ML Engine</div>
+        <h1>Upload &amp; <span class="g">Generate Questions</span></h1>
+        <p>Paste study material or upload a .txt file. Select difficulty, configure settings, then generate questions using NLP analysis.</p>
+      </div>
+      <div class="twocol">
+        <div class="card">
+          <div class="ctitle">📝 Study Text</div>
+          <div class="csub">Paste lecture notes, textbook content, or any educational text.</div>
+          <textarea class="stxt" id="stxt" oninput="updateCC()" placeholder="Paste your study material here...&#10;&#10;Or click a sample topic below to load example content instantly."></textarea>
+          <div class="ccrow"><span class="cctag" id="cch">0 chars</span><span class="cctag" id="ccw">0 words</span></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">📂 Upload .txt File</div>
+          <div class="csub">Drop a plain text file with your study content.</div>
+          <div class="dz" id="dz">
+            <input type="file" accept=".txt,.text" id="fi" onchange="handleFile(event)">
+            <div class="dzico">📁</div>
+            <div class="dzt">Drop .txt file here</div>
+            <div class="dzs">or click to browse</div>
+            <div class="dzok" id="dzok"></div>
+          </div>
+          <div class="ctitle" style="font-size:.81rem;margin-top:14px;margin-bottom:7px">💡 Quick Sample Topics</div>
+          <div class="srow">
+            <button class="smpbtn" onclick="loadSample('ml')">Machine Learning</button>
+            <button class="smpbtn" onclick="loadSample('nlp')">NLP</button>
+            <button class="smpbtn" onclick="loadSample('os')">OS</button>
+            <button class="smpbtn" onclick="loadSample('db')">DBMS</button>
+            <button class="smpbtn" onclick="loadSample('nn')">Neural Nets</button>
+            <button class="smpbtn" onclick="loadSample('ds')">Data Structures</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cfgwrap">
+        <div class="ctitle" style="margin-bottom:3px">⚙️ Generation Settings</div>
+        <div class="csub">Configure difficulty mode, question type, count, and Bloom's focus.</div>
+        <div class="cfg3">
+          <div>
+            <label class="cl">Difficulty Mode</label>
+            <!-- Each chip uses data-d attribute; JS reads active chip's data-d directly -->
+            <div class="dchips">
+              <div class="dchip" data-d="Easy" onclick="clickDiff(this)">Easy</div>
+              <div class="dchip" data-d="Medium" onclick="clickDiff(this)">Medium</div>
+              <div class="dchip" data-d="Hard" onclick="clickDiff(this)">Hard</div>
+              <div class="dchip active" data-d="Adaptive" onclick="clickDiff(this)">🤖 Adaptive</div>
+            </div>
+          </div>
+          <div>
+            <label class="cl">Question Type</label>
+            <select class="ssel" id="qtype">
+              <option value="mixed">Mixed (All Types)</option>
+              <option value="mcq">Multiple Choice (MCQ)</option>
+              <option value="short">Short Answer</option>
+              <option value="truefalse">True / False</option>
+              <option value="fill">Fill in the Blank</option>
+            </select>
+          </div>
+          <div>
+            <label class="cl">Count: <span id="qcl" style="color:var(--blue2)">10</span></label>
+            <input type="range" min="3" max="20" value="10" id="qcr"
+              oninput="document.getElementById('qcl').textContent=this.value">
+            <div class="rv" id="qcrv">10 questions</div>
+          </div>
+        </div>
+        <div class="cfg2">
+          <div>
+            <label class="cl">Bloom's Taxonomy Focus</label>
+            <select class="ssel" id="bloom">
+              <option value="auto">Auto (System Decides)</option>
+              <option value="remember">Remember — Recall (L1)</option>
+              <option value="understand">Understand — Interpret (L2)</option>
+              <option value="apply">Apply — Use in context (L3)</option>
+              <option value="analyze">Analyze — Examine (L4)</option>
+              <option value="evaluate">Evaluate — Judge (L5)</option>
+              <option value="create">Create — Design (L6)</option>
+            </select>
+          </div>
+          <div>
+            <label class="cl">Adaptive Strategy</label>
+            <select class="ssel" id="astrat">
+              <option value="performance">Performance-Based</option>
+              <option value="time">Time-Based</option>
+              <option value="streak">Streak-Based</option>
+              <option value="manual">Manual (Fixed Level)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <button class="genbtn" id="genbtn" onclick="generateQs()">
+        <span id="gbt">✨ Generate Questions with NLP &amp; AI</span>
+      </button>
+    </div>
+
+    <!-- QBANK PAGE -->
+    <div class="page" id="page-qbank">
+      <div class="ph">
+        <div class="ptag">Question Repository</div>
+        <h1>Question <span class="g">Bank</span></h1>
+        <p>All generated questions organised by difficulty and Bloom's Taxonomy level.</p>
+      </div>
+      <div class="qbar">
+        <div class="fgrp">
+          <button class="fc fa" id="fc-all"    onclick="filterBank('all')">All</button>
+          <button class="fc"    id="fc-Easy"   onclick="filterBank('Easy')">Easy</button>
+          <button class="fc"    id="fc-Medium" onclick="filterBank('Medium')">Medium</button>
+          <button class="fc"    id="fc-Hard"   onclick="filterBank('Hard')">Hard</button>
+        </div>
+        <button class="sqbtn" onclick="goQuizWithFilter()">▶ Start Quiz</button>
+        <span class="qcnt" id="qcnt">0 questions</span>
+      </div>
+      <div class="qlist" id="qlist">
+        <div class="empty"><div class="ei">🗂️</div><div class="et">No questions yet</div><div class="es">Go to Upload &amp; Generate to create your first questions.</div></div>
+      </div>
+    </div>
+
+    <!-- QUIZ PAGE -->
+    <div class="page" id="page-quiz">
+      <div class="ph">
+        <div class="ptag">Adaptive Assessment</div>
+        <h1>Adaptive <span class="g">Quiz</span></h1>
+        <p>Difficulty adjusts in real-time based on your accuracy and response speed.</p>
+      </div>
+      <div class="qswrap" id="qsw">
+        <div class="qscard">
+          <h2>Choose Quiz Mode</h2>
+          <p>Select how the adaptive engine responds to your performance.</p>
+          <div class="mgrid">
+            <div class="mc sel" data-mode="adaptive" onclick="selMode(this)"><div class="mcico">🤖</div><div class="mctitle">Adaptive AI</div><div class="mcdesc">Auto-adjusts difficulty based on accuracy &amp; speed</div></div>
+            <div class="mc" data-mode="easy"     onclick="selMode(this)"><div class="mcico">🌱</div><div class="mctitle">Easy Only</div><div class="mcdesc">Recall &amp; understanding — foundational</div></div>
+            <div class="mc" data-mode="medium"   onclick="selMode(this)"><div class="mcico">⚡</div><div class="mctitle">Medium Only</div><div class="mcdesc">Application &amp; analysis level</div></div>
+            <div class="mc" data-mode="hard"     onclick="selMode(this)"><div class="mcico">🔥</div><div class="mctitle">Hard Only</div><div class="mcdesc">Evaluation &amp; synthesis level</div></div>
+          </div>
+          <div class="o2">
+            <div><label class="cl">Timer per Question</label>
+              <select class="ssel" id="tsel">
+                <option value="30">30 seconds</option>
+                <option value="45" selected>45 seconds</option>
+                <option value="60">60 seconds</option>
+                <option value="90">90 seconds</option>
+                <option value="0">No timer</option>
+              </select>
+            </div>
+            <div><label class="cl">Questions per Quiz</label>
+              <select class="ssel" id="qcsel">
+                <option value="5">5 questions</option>
+                <option value="10" selected>10 questions</option>
+                <option value="15">15 questions</option>
+                <option value="20">20 questions</option>
+              </select>
+            </div>
+          </div>
+          <button class="startbtn" onclick="startQuiz()">Start Quiz →</button>
+          <div class="nqw" id="nqw"></div>
+        </div>
+      </div>
+      <div class="qa" id="qactive">
+        <div class="qhdr">
+          <div class="qinfo">Q <strong id="qcur">1</strong> / <strong id="qtot">10</strong></div>
+          <div class="ptrack"><div class="pfill" id="pfill" style="width:0%"></div></div>
+          <div class="qtmr" id="qtmr">00:45</div>
+        </div>
+        <div class="aban" id="aban"><div class="abdot"></div><span id="abmsg">Adaptive engine adjusting...</span></div>
+        <div class="qcard-q">
+          <div class="qcmeta" id="qcmeta"></div>
+          <div class="qtext" id="qtext"></div>
+          <div id="aarea"></div>
+          <div class="fb" id="fb"></div>
+        </div>
+        <div class="qnav">
+          <button class="bsub" id="bsub" onclick="submitAns()">Submit Answer</button>
+          <button class="bnxt" id="bnxt" onclick="nextQ()" style="display:none">Next Question →</button>
+        </div>
+      </div>
+      <div class="rs" id="rscreen">
+        <div class="rcard">
+          <div class="rem" id="rem">🎉</div>
+          <div class="rtitle" id="rtitle">Quiz Complete!</div>
+          <div class="rsub" id="rsub">Your performance breakdown</div>
+          <div class="rstats">
+            <div class="rsbox"><div class="rsval" style="color:var(--cyan)" id="rscore">—</div><div class="rslbl">Score</div></div>
+            <div class="rsbox"><div class="rsval" style="color:var(--blue2)" id="racc">—</div><div class="rslbl">Accuracy</div></div>
+            <div class="rsbox"><div class="rsval" style="color:var(--amber)" id="ravgt">—</div><div class="rslbl">Avg Time</div></div>
+          </div>
+          <div id="rbreak" style="margin-bottom:18px;text-align:left"></div>
+          <div class="rbtns">
+            <button class="retrybtn" onclick="restartQuiz()">Try Again</button>
+            <button class="anlbtn" onclick="goPage('analytics')">View Analytics →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS PAGE -->
+    <div class="page" id="page-analytics">
+      <div class="ph">
+        <div class="ptag">Learning Intelligence</div>
+        <h1>Performance <span class="g">Analytics</span></h1>
+        <p>Insights into your learning patterns, strengths, and areas to improve.</p>
+      </div>
+      <div class="krow">
+        <div class="kpi kb"><div class="klbl">Total Questions</div><div class="kval" id="k-q">0</div><div class="kd">In bank</div></div>
+        <div class="kpi kt"><div class="klbl">Accuracy Rate</div><div class="kval" id="k-acc">—</div><div class="kd" id="k-acc-d">No quiz taken</div></div>
+        <div class="kpi ky"><div class="klbl">Avg Response</div><div class="kval" id="k-time">—</div><div class="kd">Per question</div></div>
+        <div class="kpi kc"><div class="klbl">Quizzes Taken</div><div class="kval" id="k-qz">0</div><div class="kd">Total sessions</div></div>
+      </div>
+      <div class="amid">
+        <div class="accrd">
+          <div class="act">Accuracy by Difficulty</div><div class="acs">Correct answers per tier</div>
+          <div class="bchart">
+            <div class="bg"><div class="bval" id="bv-e" style="color:var(--cyan)">0%</div><div class="btk"><div class="bf" id="bf-e" style="height:0%;background:linear-gradient(180deg,var(--cyan),var(--cyan2))"></div></div><div class="blbl">Easy</div></div>
+            <div class="bg"><div class="bval" id="bv-m" style="color:var(--amber)">0%</div><div class="btk"><div class="bf" id="bf-m" style="height:0%;background:linear-gradient(180deg,var(--amber),#c89a00)"></div></div><div class="blbl">Medium</div></div>
+            <div class="bg"><div class="bval" id="bv-h" style="color:var(--coral)">0%</div><div class="btk"><div class="bf" id="bf-h" style="height:0%;background:linear-gradient(180deg,var(--coral),#cc2244)"></div></div><div class="blbl">Hard</div></div>
+            <div class="bg"><div class="bval" id="bv-a" style="color:var(--blue2)">0%</div><div class="btk"><div class="bf" id="bf-a" style="height:0%;background:var(--grad)"></div></div><div class="blbl">Overall</div></div>
+          </div>
+        </div>
+        <div class="accrd" style="text-align:center">
+          <div class="act">Question Distribution</div><div class="acs">Bank by difficulty</div>
+          <div class="donut-w">
+            <svg viewBox="0 0 100 100" width="115" height="115" style="transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--p4)" stroke-width="11"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--cyan)"  stroke-width="11" stroke-dasharray="0 239" id="dc-e" style="transition:stroke-dasharray 1.1s cubic-bezier(.22,.68,0,1.2)"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--amber)" stroke-width="11" stroke-dasharray="0 239" id="dc-m" style="transition:stroke-dasharray 1.1s cubic-bezier(.22,.68,0,1.2)"/>
+              <circle cx="50" cy="50" r="38" fill="none" stroke="var(--coral)" stroke-width="11" stroke-dasharray="0 239" id="dc-h" style="transition:stroke-dasharray 1.1s cubic-bezier(.22,.68,0,1.2)"/>
+            </svg>
+            <div class="dc"><div class="dv" id="dcv">0</div><div class="ds">total</div></div>
+          </div>
+          <div class="dleg">
+            <div class="dl"><div class="dld" style="background:var(--cyan)"></div>Easy<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--tx3)" id="le">0</span></div>
+            <div class="dl"><div class="dld" style="background:var(--amber)"></div>Medium<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--tx3)" id="lm">0</span></div>
+            <div class="dl"><div class="dld" style="background:var(--coral)"></div>Hard<span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--tx3)" id="lh">0</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="hcrd">
+        <div class="act">Recent Quiz History</div><div class="acs" style="margin-bottom:0">Last answered questions</div>
+        <div class="hlist" id="hlist"><div style="text-align:center;padding:22px;color:var(--tx3);font-size:.82rem">No history yet — take a quiz first.</div></div>
+      </div>
+      <div class="accrd">
+        <div class="act">Adaptive Difficulty Progression</div><div class="acs" style="margin-bottom:11px">How difficulty shifted across your last quiz</div>
+        <div class="dpwrap" id="dpwrap"><div style="color:var(--tx3);font-size:.79rem">Take a quiz to see your difficulty journey.</div></div>
+      </div>
+    </div>
+
+    <!-- PREVIOUS DASHBOARD PAGE -->
+    <div class="page" id="page-previous">
+      <div class="ph">
+        <div class="ptag">Persistent History</div>
+        <h1>Previous <span class="g">Dashboard</span></h1>
+        <p>View previous quiz attempts saved in the backend database.</p>
+      </div>
+
+      <div class="krow" id="prev-kpis">
+        <div class="kpi kb"><div class="klbl">Attempts</div><div class="kval" id="pk-attempts">0</div><div class="kd">Saved sessions</div></div>
+        <div class="kpi kt"><div class="klbl">Best Score</div><div class="kval" id="pk-best">0%</div><div class="kd">Highest percentage</div></div>
+        <div class="kpi ky"><div class="klbl">Average Score</div><div class="kval" id="pk-avg">0%</div><div class="kd">Across saved attempts</div></div>
+        <div class="kpi kc"><div class="klbl">Last Mode</div><div class="kval" id="pk-last" style="font-size:1.1rem">—</div><div class="kd">Latest difficulty filter</div></div>
+      </div>
+
+      <div class="hcrd">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+          <div>
+            <div class="act">Previous Quiz Sessions</div>
+            <div class="acs" style="margin-bottom:0">Latest attempts from SQLite history</div>
+          </div>
+          <button class="sqbtn" onclick="loadPreviousDashboard(true)">↻ Refresh</button>
+        </div>
+        <div class="ptools">
+          <input id="prev-search" class="psrch" type="text" placeholder="Search by input type or difficulty..." oninput="renderPreviousTable()">
+          <select id="prev-diff-filter" class="pddl" onchange="renderPreviousTable()">
+            <option value="All">All Difficulties</option>
+            <option value="Easy">Easy</option>
+            <option value="Medium">Medium</option>
+            <option value="Hard">Hard</option>
+            <option value="Adaptive">Adaptive</option>
+          </select>
+          <select id="prev-limit" class="pddl" onchange="loadPreviousDashboard(false)">
+            <option value="10">Last 10</option>
+            <option value="20" selected>Last 20</option>
+            <option value="30">Last 30</option>
+            <option value="50">Last 50</option>
+          </select>
+        </div>
+        <div class="history-table-wrap" style="margin-top:12px">
+          <table class="history-table">
+            <thead>
+              <tr><th>ID</th><th>Score</th><th>Percent</th><th>Difficulty</th><th>Input</th><th>Date</th></tr>
+            </thead>
+            <tbody id="prev-table-body">
+              <tr><td colspan="6" class="pempty">No previous quizzes yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pwrap -->
+</div><!-- /main -->
+</div><!-- /shell -->
+<div class="twrap" id="twrap"></div>
+
+<script>
+/* ============================================================
+   ALL STATE
+   ============================================================ */
+var questions  = [];       // full question bank
+var qzQuestions = [];      // current quiz questions
+var qzCurrent  = 0;
+var qzAnswers  = [];
+var qzTimes    = [];
+var qzDiffProg = [];
+var qzTimer    = null;
+var qzTimeLeft = 45;
+var qzTimeStart= 0;
+var qzMode     = 'adaptive';
+var bankFilter = 'all';    // current active filter in qbank
+var lastGeneratedDifficulty = 'Adaptive';
+var lastInputType = 'Text';
+var previousSessions = [];
+var stats = { qz:0, ans:0, cor:0, byDiff:{ Easy:{c:0,t:0}, Medium:{c:0,t:0}, Hard:{c:0,t:0} } };
+
+/* ============================================================
+   READ DIFFICULTY FROM DOM — the fix:
+   Instead of storing in a JS variable that can get out of sync,
+   we always read which chip has class "active" at generation time.
+   ============================================================ */
+function getSelectedDiff() {
+  var active = document.querySelector('.dchip.active');
+  if (active) {
+    var d = active.getAttribute('data-d');
+    if (d) return d;
+  }
+  /* Fallback: default to Adaptive and restore the active chip visually */
+  var adaptiveChip = document.querySelector('.dchip[data-d="Adaptive"]');
+  if (adaptiveChip) adaptiveChip.classList.add('active');
+  return 'Adaptive';
+}
+
+function clickDiff(el) {
+  /* Remove active from all chips, add to clicked */
+  document.querySelectorAll('.dchip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+  /* Update topbar pill */
+  var d = el.getAttribute('data-d');
+  var dotClass = { Easy:'e', Medium:'m', Hard:'h', Adaptive:'a' };
+  var dpd = document.getElementById('dpd');
+  var dlbl = document.getElementById('dlbl');
+  if (dpd)  dpd.className  = 'dpdot ' + (dotClass[d] || 'a');
+  if (dlbl) dlbl.textContent = d;
+  /* Force a repaint so the active style is immediately visible */
+  el.offsetHeight; // eslint-disable-line no-unused-expressions
+}
+
+/* ============================================================
+   SAMPLE TEXTS
+   ============================================================ */
+var SMPL = {
+ml:'Machine learning is a subset of artificial intelligence that enables systems to automatically learn and improve from experience without being explicitly programmed. The three main types of machine learning are supervised learning, unsupervised learning, and reinforcement learning. In supervised learning the model trains on labeled input-output pairs to learn a mapping function. Common algorithms include linear regression for continuous output, logistic regression for classification, decision trees that split on feature values, random forests that combine many decision trees, and support vector machines that find the optimal separating hyperplane. Gradient descent minimizes the loss function by iteratively adjusting model parameters in the direction of steepest descent. Overfitting occurs when a model learns the training data too well but generalizes poorly to new data. Regularization techniques such as L1 Lasso and L2 Ridge add penalty terms to prevent overfitting. Cross-validation partitions data into folds to provide an unbiased estimate of model performance. The bias-variance tradeoff describes the balance between underfitting and overfitting. Feature engineering transforms raw data into informative representations. Ensemble methods like boosting and bagging combine multiple models to improve accuracy.',
+
+nlp:'Natural Language Processing is a branch of artificial intelligence that enables computers to understand, interpret, and generate human language. Tokenization splits text into individual words or subword units called tokens. Part-of-speech tagging assigns labels like noun, verb, adjective, or adverb to each token in a sentence. Named Entity Recognition identifies and classifies named entities such as persons, organizations, locations, and dates in text. Sentiment analysis determines whether a piece of text expresses positive, negative, or neutral emotion. Word embeddings such as Word2Vec and GloVe represent words as dense numerical vectors that capture semantic relationships. The Transformer architecture uses self-attention mechanisms to allow each word to attend to all other words in the sequence. BERT is a bidirectional transformer model pretrained using masked language modeling on large text corpora. TF-IDF stands for Term Frequency-Inverse Document Frequency and measures how important a word is to a document. Dependency parsing identifies grammatical relationships between words in a sentence structure. Coreference resolution determines which pronouns or noun phrases refer to the same real-world entity.',
+
+os:'An operating system is system software that manages computer hardware, software resources, and provides common services for computer programs. Process management involves creating, scheduling, and terminating processes on the processor. A process is a program in execution that has its own address space, program counter, registers, and stack. CPU scheduling algorithms include First-Come First-Served, Round Robin, Shortest-Job-First, and Priority Scheduling. Context switching is the mechanism of saving the state of one process and loading the state of another. Memory management handles the allocation and deallocation of physical memory to processes. Virtual memory allows programs to use more memory than is physically available by using disk space as an extension. Paging divides memory into fixed-size pages and maps them to physical frames to eliminate external fragmentation. Deadlock is a situation where two or more processes wait indefinitely for resources held by each other. The four necessary conditions for deadlock are mutual exclusion, hold and wait, no preemption, and circular wait. Semaphores and mutex locks are synchronization primitives used to control access to shared resources in concurrent programs.',
+
+db:'A Database Management System is software that stores, retrieves, and manages data in a structured way while maintaining data integrity, security, and efficient access. The relational model represents data as tables with rows and columns connected by relationships. SQL or Structured Query Language is the standard language for creating and querying relational databases using commands SELECT, INSERT, UPDATE, and DELETE. A primary key uniquely identifies each row in a table and cannot be null. A foreign key in one table refers to the primary key in another table to maintain referential integrity. Normalization organizes table structures to reduce redundancy and dependency. First Normal Form eliminates repeating groups by ensuring atomic column values. Second Normal Form removes partial dependencies where non-key columns depend on only part of a composite key. Third Normal Form eliminates transitive dependencies between non-key columns. The ACID properties ensure database transactions are Atomic, Consistent, Isolated, and Durable. A B-tree index is a balanced tree structure used to speed up data retrieval operations. A transaction groups multiple SQL operations into a single unit that either completes entirely or rolls back completely.',
+
+nn:'A neural network is a machine learning model composed of layers of interconnected artificial neurons inspired by the structure of the biological brain. The input layer receives feature vectors, hidden layers extract learned representations, and the output layer produces final predictions or classifications. Weights on connections between neurons are adjusted during training to minimize the prediction error measured by a loss function. Activation functions introduce non-linearity into the network allowing it to learn complex patterns. ReLU or Rectified Linear Unit outputs the input directly if positive and zero otherwise, and helps solve the vanishing gradient problem. The backpropagation algorithm computes gradients of the loss with respect to each weight using the chain rule of calculus. Stochastic gradient descent and the Adam optimizer iteratively update weights to reduce the loss. A Convolutional Neural Network applies learnable filters across input data making it particularly effective for image classification and object detection. A Recurrent Neural Network processes sequential data by maintaining a hidden state that captures information from previous time steps. Long Short-Term Memory networks introduce input, forget, and output gates to selectively retain or discard information across long sequences. Dropout randomly deactivates a proportion of neurons during training as a regularization technique to reduce overfitting.',
+
+ds:'Data structures are ways of organizing and storing data in computer memory so that it can be accessed and modified efficiently. An array stores elements in contiguous memory locations and provides constant time access by index but requires linear time for insertion or deletion. A linked list stores elements as nodes where each node contains data and a pointer to the next node, enabling efficient insertion and deletion. A stack is a linear data structure that follows Last-In-First-Out order, supporting push to add and pop to remove elements in constant time. A queue follows First-In-First-Out order using enqueue to add at the rear and dequeue to remove from the front. A binary search tree stores keys so that each node\'s left subtree contains smaller keys and its right subtree contains larger keys. AVL trees and Red-Black trees are self-balancing binary search trees that ensure logarithmic height for efficient search, insert, and delete. A hash table uses a hash function to map keys to bucket indices providing average constant time for insert, delete, and lookup. A graph consists of vertices and edges and can represent networks; depth-first search and breadth-first search are fundamental traversal algorithms. A heap is a complete binary tree satisfying the heap property used to implement a priority queue where the highest priority element is always at the root.'
+};
+
+/* ============================================================
+   NLP ENGINE — TF-IDF keyword extraction + question templates
+   ============================================================ */
+var STOPWORDS = new Set([
+  'the','a','an','is','are','was','were','be','been','being','have','has','had',
+  'do','does','did','will','would','shall','should','may','might','must','can','could',
+  'that','this','these','those','and','or','but','in','on','at','to','for','of','with',
+  'by','from','as','into','through','it','its','they','them','their','we','our',
+  'you','your','he','she','his','her','who','which','what','when','where','how',
+  'why','each','both','only','also','such','more','most','all','any','then','than',
+  'not','so','if','used','using','other','about','where','there','here','very',
+  'just','some','over','after','before','each','well','between','during','while',
+  'different','following','without','number','always','often','called','known'
+]);
+
+/* Split text into clean sentences */
+function getSentences(text) {
+  return text.split(/(?<=[.!?])\s+/)
+    .map(function(s){ return s.trim(); })
+    .filter(function(s){ return s.length > 40 && s.split(' ').length > 6; });
+}
+
+/* Compute TF-IDF scores for words across the document */
+function computeTFIDF(sentences) {
+  var docCount = sentences.length;
+  var df = {};  // document frequency
+  var tf = [];  // term frequency per sentence
+
+  sentences.forEach(function(sent) {
+    var words = sent.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/)
+      .filter(function(w){ return w.length > 3 && !STOPWORDS.has(w); });
+    var freq = {};
+    words.forEach(function(w){ freq[w] = (freq[w]||0) + 1; });
+    tf.push(freq);
+    Object.keys(freq).forEach(function(w){ df[w] = (df[w]||0) + 1; });
+  });
+
+  // TF-IDF score per sentence
+  var scored = sentences.map(function(sent, idx) {
+    var words = Object.keys(tf[idx]);
+    var topWords = words.map(function(w) {
+      var tfidf = tf[idx][w] * Math.log((docCount+1) / ((df[w]||1)+1));
+      return { word: w, score: tfidf };
+    }).sort(function(a,b){ return b.score - a.score; });
+    return {
+      sentence: sent,
+      keywords: topWords.slice(0,5).map(function(x){ return x.word; }),
+      topKeyword: topWords[0] ? topWords[0].word : words[0] || 'concept'
+    };
+  });
+
+  return scored;
+}
+
+/* Named Entity style extraction — capitalised phrases */
+function extractEntities(sentence) {
+  var entities = [];
+  var matches = sentence.match(/\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b/g);
+  if (matches) {
+    matches.forEach(function(m) {
+      if (m.split(' ').length <= 4 && m.length > 3) entities.push(m);
+    });
+  }
+  return entities;
+}
+
+/* Choose best keyword for a sentence using TF-IDF data + entities */
+function pickKeyword(sentData) {
+  var entities = extractEntities(sentData.sentence);
+  // prefer named entities (proper nouns / technical terms)
+  if (entities.length > 0) {
+    // prefer entity that also appears in tfidf keywords
+    for (var i = 0; i < entities.length; i++) {
+      var ent = entities[i].toLowerCase();
+      if (sentData.keywords.indexOf(ent) >= 0) return entities[i];
+    }
+    return entities[0];
+  }
+  // fallback to top TF-IDF keyword with capitalisation restored
+  var kw = sentData.topKeyword;
+  // try to find it in sentence with original casing
+  var re = new RegExp('\\b' + kw + '\\b', 'i');
+  var match = sentData.sentence.match(re);
+  return match ? match[0] : kw;
+}
+
+/* Bloom's level per difficulty */
+function bloomFor(diff) {
+  var map = {
+    Easy:   ['Remember (L1)','Understand (L2)'],
+    Medium: ['Apply (L3)','Analyze (L4)'],
+    Hard:   ['Evaluate (L5)','Create (L6)']
+  };
+  var opts = map[diff] || map.Medium;
+  return opts[Math.floor(Math.random() * opts.length)];
+}
+
+/* Question type selection */
+function pickType(forced) {
+  if (forced !== 'mixed') {
+    var m = { mcq:'MCQ', short:'Short', truefalse:'TF', fill:'Fill' };
+    return m[forced] || 'MCQ';
+  }
+  var pool = ['MCQ','MCQ','MCQ','TF','Fill','Short'];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/* Wrong MCQ distractors */
+var DISTRACTORS = [
+  'It is an unrelated mathematical construct with no application here',
+  'It is a legacy technique replaced by modern approaches',
+  'It is a hardware specification with no algorithmic significance',
+  'It is a networking protocol unrelated to this domain',
+  'It is an optional debugging utility not covered in this material',
+  'It contradicts the principle described in the passage',
+  'It is a deprecated standard no longer in active use',
+  'It is an I/O operation exclusive to embedded systems'
+];
+
+/* Build one question object from sentence data + difficulty */
+function buildQuestion(sentData, diff, forced, bloomPref) {
+  var type = pickType(forced);
+  var kw   = pickKeyword(sentData);
+  var sent = sentData.sentence;
+
+  /* Bloom override */
+  var bloomMap = {
+    remember:'Remember (L1)', understand:'Understand (L2)',
+    apply:'Apply (L3)',       analyze:'Analyze (L4)',
+    evaluate:'Evaluate (L5)', create:'Create (L6)'
+  };
+  var bloom = (bloomPref !== 'auto' && bloomMap[bloomPref]) ? bloomMap[bloomPref] : bloomFor(diff);
+
+  /* Question templates by difficulty and type */
+  var templates = {
+    Easy: {
+      MCQ:   'Which of the following best describes ' + kw + ' based on the passage?',
+      TF:    'True or False: ' + sent.substring(0,110).trim() + '.',
+      Fill:  'Complete the sentence: "' + sent.replace(new RegExp('\\b'+kw+'\\b','i'), '________').substring(0,135) + '"',
+      Short: 'Define ' + kw + ' as described in the material. Give a brief explanation.'
+    },
+    Medium: {
+      MCQ:   'What is the primary role of ' + kw + ' in the context described?',
+      TF:    'True or False: ' + kw + ' plays a significant role in the concepts discussed in this passage.',
+      Fill:  kw + ' is primarily used for ________ according to the study material.',
+      Short: 'Explain how ' + kw + ' relates to the broader concepts in this passage. Use an example.'
+    },
+    Hard: {
+      MCQ:   'Which analysis best evaluates the significance and trade-offs of ' + kw + '?',
+      TF:    'True or False: A critical evaluation of ' + kw + ' reveals limitations not apparent from a surface reading.',
+      Fill:  'In an advanced analysis, ' + kw + ' can be characterized as ________ compared to alternative approaches.',
+      Short: 'Critically analyze ' + kw + ': discuss its purpose, advantages, limitations, and how it compares to alternatives.'
+    }
+  };
+
+  var row = templates[diff] || templates.Medium;
+  var qText = row[type] || row.MCQ;
+
+  var options = [], correct = 0, answer = '';
+
+  if (type === 'MCQ') {
+    var correctOpt = kw + ' refers to ' + sentData.keywords.slice(0,2).join(' and ') + ' — a ' +
+      (diff==='Easy'?'fundamental':diff==='Medium'?'significant':'critically analyzed') + ' concept in this domain';
+    var wrongs = DISTRACTORS.slice().sort(function(){ return Math.random()-.5; }).slice(0,3);
+    var all = [correctOpt].concat(wrongs).sort(function(){ return Math.random()-.5; });
+    correct = all.indexOf(correctOpt);
+    options = all;
+    answer  = correctOpt;
+  } else if (type === 'TF') {
+    options = ['True','False'];
+    correct = 0;
+    answer  = 'True';
+  } else if (type === 'Fill') {
+    answer = kw;
+  } else {
+    answer = kw + ' is ' + (diff==='Hard'
+      ? 'a concept that warrants critical analysis — considering its function (' + (sentData.keywords[1]||'operation') + '), trade-offs, and alternatives in context.'
+      : 'a key concept: ' + sent.substring(0, 120).trim() + (sent.length>120?'...':''));
+  }
+
+  return {
+    id:         '' + Date.now() + Math.random(),
+    question:   qText,
+    type:       type,
+    difficulty: diff,
+    bloom:      bloom,
+    options:    options,
+    correct:    correct,
+    answer:     answer,
+    keyword:    kw,
+    sentence:   sent
+  };
+}
+
+/* ============================================================
+   GENERATE QUESTIONS
+   KEY FIX: reads difficulty by calling getSelectedDiff()
+   which reads the DOM directly — 100% reliable
+   ============================================================ */
+async function generateQs() {
+  var txt = document.getElementById('stxt').value.trim();
+  if (txt.length < 80) {
+    toast('Please enter at least 80 characters of study content.', 'warning');
+    return;
+  }
+
+  /* Read ALL settings from DOM at the moment of click */
+  var diff      = getSelectedDiff();   // reads active .dchip directly
+  lastGeneratedDifficulty = diff;
+  lastInputType = 'Text';
+  var count     = parseInt(document.getElementById('qcr').value, 10);
+  var forced    = document.getElementById('qtype').value;
+  var bloomPref = document.getElementById('bloom').value;
+
+  var btn = document.getElementById('genbtn');
+  btn.disabled = true;
+  document.getElementById('gbt').innerHTML = '<span class="spin"></span>Running NLP analysis · Extracting concepts...';
+
+  try {
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: txt,
+        difficulty: diff,
+        count: count,
+        questionType: forced,
+        bloom: bloomPref
+      })
+    });
+
+    var data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'NLP backend request failed');
+    }
+
+    if (!data.questions || !data.questions.length) {
+      throw new Error('No questions were generated by NLP backend');
+    }
+
+    /* Prepend new questions to bank */
+    questions = data.questions.concat(questions);
+
+    /* Update UI counts */
+    updCount();
+    updAnalytics();
+
+    var generatedCount = data.meta && data.meta.count ? data.meta.count : data.questions.length;
+    var label = (diff === 'Adaptive') ? 'Adaptive (Easy+Medium+Hard)' : diff;
+    toast('✅ Generated ' + generatedCount + ' ' + label + ' questions!', 'success');
+
+    /* Set bank filter to show the generated difficulty */
+    bankFilter = (diff === 'Adaptive') ? 'all' : diff;
+    /* Sync topbar pill to match the bank filter we're about to show */
+    var pillDot  = { Easy:'e', Medium:'m', Hard:'h', all:'a' };
+    var pillLbl  = { Easy:'Easy', Medium:'Medium', Hard:'Hard', all:'All Difficulties' };
+    var _dpd = document.getElementById('dpd');
+    var _dlbl = document.getElementById('dlbl');
+    if (_dpd)  _dpd.className   = 'dpdot ' + (pillDot[bankFilter] || 'a');
+    if (_dlbl) _dlbl.textContent = pillLbl[bankFilter] || bankFilter;
+
+    /* Sync quiz mode to match the generated difficulty so quiz immediately
+       uses the right difficulty when the user clicks Start Quiz */
+    var modeMap = { Easy:'easy', Medium:'medium', Hard:'hard', Adaptive:'adaptive' };
+    var targetMode = modeMap[diff] || 'adaptive';
+    qzMode = targetMode;
+    /* Update the quiz mode card UI to reflect the synced mode */
+    document.querySelectorAll('.mc').forEach(function(c){
+      c.classList.remove('sel');
+      if (c.getAttribute('data-mode') === targetMode) c.classList.add('sel');
+    });
+
+    /* Navigate to qbank — goPage reads bankFilter */
+    goPage('qbank');
+  } catch (err) {
+    var msg = (err && err.message) ? err.message : 'Unknown backend error';
+    toast('⚠️ NLP backend failed: ' + msg, 'warning');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('gbt').textContent = '✨ Generate Questions with NLP & AI';
+  }
+}
+
+/* ============================================================
+   QUESTION BANK
+   ============================================================ */
+function renderBank() {
+  var filtered = (bankFilter === 'all')
+    ? questions
+    : questions.filter(function(q){ return q.difficulty === bankFilter; });
+
+  /* If the chosen filter returns nothing but other questions exist,
+     silently fall back to showing ALL questions so the bank is never empty */
+  var fellBack = false;
+  var data = filtered;
+  if (filtered.length === 0 && bankFilter !== 'all' && questions.length > 0) {
+    data     = questions;
+    fellBack = true;
+  }
+
+  document.getElementById('qcnt').textContent = data.length + ' question' + (data.length !== 1 ? 's' : '');
+
+  /* Highlight active filter chip */
+  ['all','Easy','Medium','Hard'].forEach(function(f) {
+    var el = document.getElementById('fc-' + f);
+    if (!el) return;
+    el.className = 'fc';
+    if (f === bankFilter) el.classList.add({ all:'fa', Easy:'fe', Medium:'fm', Hard:'fh' }[f] || 'fa');
+  });
+
+  var list = document.getElementById('qlist');
+  if (data.length === 0) {
+    /* Truly empty bank */
+    list.innerHTML = '<div class="empty">'
+      + '<div class="ei">🗂️</div>'
+      + '<div class="et">No questions yet</div>'
+      + '<div class="es">Go to Upload &amp; Generate to create your first questions.</div>'
+      + '</div>';
+    return;
+  }
+
+  /* If we fell back, show a subtle notice banner at the top */
+  var noticeBanner = '';
+  if (fellBack) {
+    var col  = { Easy:'var(--cyan)', Medium:'var(--amber)', Hard:'var(--coral)' }[bankFilter] || 'var(--blue2)';
+    noticeBanner = '<div style="'
+      + 'background:rgba(91,115,255,.07);border:1px solid rgba(91,115,255,.2);'
+      + 'border-radius:10px;padding:10px 14px;margin-bottom:12px;'
+      + 'font-size:.8rem;color:var(--tx2);display:flex;align-items:center;gap:8px;">'
+      + '<span style="color:' + col + ';font-weight:700;">ℹ️ No ' + bankFilter + ' questions found.</span>'
+      + ' Showing all ' + questions.length + ' questions instead.'
+      + ' &nbsp;<span style="color:var(--blue2);cursor:pointer;text-decoration:underline;font-weight:600" '
+      + 'onclick="goPage(\'upload\')">Generate ' + bankFilter + ' questions →</span>'
+      + '</div>';
+  }
+
+  var html = noticeBanner;
+  for (var i = 0; i < data.length; i++) {
+    var q = data[i];
+    var dc = q.difficulty==='Easy'?'de':q.difficulty==='Medium'?'dm':'dh';
+    var bc = q.difficulty==='Easy'?'be':q.difficulty==='Medium'?'bm':'bh';
+    html += '<div class="qcard ' + dc + '">'
+      + '<div>'
+      + '<div class="qno">Q' + String(i+1).padStart(2,'0') + ' · ' + q.type + '</div>'
+      + '<div class="qtxt">' + q.question + '</div>'
+      + '<div class="qmeta">'
+      + '<span class="qbadge ' + bc + '">' + q.difficulty + '</span>'
+      + '<span class="qbadge bt">' + q.type + '</span>'
+      + '<span class="btag">' + q.bloom + '</span>'
+      + '</div>'
+      + '</div>'
+      + '<div class="qacts">'
+      + '<button class="qab use" onclick="goQuizForQ(\'' + q.difficulty + '\')">Use in Quiz</button>'
+      + '<button class="qab" onclick="deleteQ(\'' + q.id + '\')">Delete</button>'
+      + '</div>'
+      + '</div>';
+  }
+  list.innerHTML = html;
+}
+
+function filterBank(f) {
+  bankFilter = f;
+  /* Keep topbar pill in sync with the active bank filter */
+  var dotClass = { Easy:'e', Medium:'m', Hard:'h', all:'a' };
+  var labelMap  = { Easy:'Easy', Medium:'Medium', Hard:'Hard', all:'All Difficulties' };
+  var dpd  = document.getElementById('dpd');
+  var dlbl = document.getElementById('dlbl');
+  if (dpd)  dpd.className   = 'dpdot ' + (dotClass[f] || 'a');
+  if (dlbl) dlbl.textContent = labelMap[f] || f;
+  renderBank();
+}
+
+function deleteQ(id) {
+  questions = questions.filter(function(q){ return q.id !== id; });
+  updCount();
+  updAnalytics();
+  renderBank();
+  toast('Question removed.', 'info');
+}
+
+function updCount() {
+  document.getElementById('nb-cnt').textContent = questions.length;
+  document.getElementById('ss-q').textContent   = questions.length;
+}
+
+/* ============================================================
+   QUIZ ENGINE
+   ============================================================ */
+function selMode(el) {
+  document.querySelectorAll('.mc').forEach(function(c){ c.classList.remove('sel'); });
+  el.classList.add('sel');
+  qzMode = el.getAttribute('data-mode');
+}
+
+/* Navigate to Quiz page and pre-select a mode matching the given difficulty string */
+function setQuizMode(mode) {
+  qzMode = mode;
+  document.querySelectorAll('.mc').forEach(function(c){
+    c.classList.remove('sel');
+    if (c.getAttribute('data-mode') === mode) c.classList.add('sel');
+  });
+}
+
+/* Called from qbank "▶ Start Quiz" button — respects the active bank filter */
+function goQuizWithFilter() {
+  var modeMap = { Easy:'easy', Medium:'medium', Hard:'hard', all:'adaptive' };
+  setQuizMode(modeMap[bankFilter] || 'adaptive');
+  goPage('quiz');
+}
+
+/* Called from individual question "Use in Quiz" button */
+function goQuizForQ(difficulty) {
+  var modeMap = { Easy:'easy', Medium:'medium', Hard:'hard' };
+  setQuizMode(modeMap[difficulty] || 'adaptive');
+  goPage('quiz');
+}
+
+function startQuiz() {
+  if (questions.length === 0) {
+    document.getElementById('nqw').textContent = '⚠️ No questions yet. Generate some first!';
+    return;
+  }
+  var diffMap = { easy:'Easy', medium:'Medium', hard:'Hard' };
+  var pool = (qzMode === 'adaptive')
+    ? questions.slice()
+    : questions.filter(function(q){ return q.difficulty === diffMap[qzMode]; });
+
+  if (pool.length === 0) {
+    var diffLabel = diffMap[qzMode] || qzMode;
+    document.getElementById('nqw').textContent = '⚠️ No ' + diffLabel + ' questions in the bank. Generate some first or switch quiz mode.';
+    return;
+  }
+  document.getElementById('nqw').textContent = '';
+  var qc = parseInt(document.getElementById('qcsel').value, 10);
+  pool = pool.sort(function(){ return Math.random()-0.5; }).slice(0, Math.min(qc, pool.length));
+
+  qzQuestions = pool;
+  qzCurrent   = 0;
+  qzAnswers   = [];
+  qzTimes     = [];
+  qzDiffProg  = [];
+
+  document.getElementById('qsw').classList.add('hide');
+  document.getElementById('qactive').classList.add('on');
+  document.getElementById('rscreen').classList.remove('on');
+  document.getElementById('qtot').textContent = pool.length;
+
+  loadQuestion(0);
+}
+
+function adaptiveSuggest(idx) {
+  if (qzMode !== 'adaptive' || idx < 2) return null;
+  var recent = qzAnswers.slice(-3);
+  var rate = recent.filter(function(a){ return a.correct; }).length / recent.length;
+  var avgT = recent.reduce(function(s,a){ return s + a.time; }, 0) / recent.length;
+  var curDiff = qzQuestions[idx-1] ? qzQuestions[idx-1].difficulty : null;
+  if (rate >= 0.75 && avgT < 22) {
+    if (curDiff === 'Easy')   return 'Medium';
+    if (curDiff === 'Medium') return 'Hard';
+  }
+  if (rate <= 0.35) {
+    if (curDiff === 'Hard')   return 'Medium';
+    if (curDiff === 'Medium') return 'Easy';
+  }
+  return null;
+}
+
+function loadQuestion(idx) {
+  if (idx >= qzQuestions.length) { endQuiz(); return; }
+
+  /* Adaptive swap */
+  var sug = adaptiveSuggest(idx);
+  if (sug) {
+    var already = qzQuestions.slice(0, idx);
+    var alt = null;
+    for (var k = 0; k < questions.length; k++) {
+      if (questions[k].difficulty === sug && already.indexOf(questions[k]) < 0) {
+        alt = questions[k]; break;
+      }
+    }
+    if (alt) {
+      qzQuestions[idx] = alt;
+      document.getElementById('abmsg').textContent = '🤖 Switching to ' + sug + ' based on your recent performance.';
+      document.getElementById('aban').classList.add('on');
+      setTimeout(function(){ document.getElementById('aban').classList.remove('on'); }, 2600);
+    }
+  }
+
+  var q = qzQuestions[idx];
+  qzDiffProg.push(q.difficulty);
+
+  /* Progress */
+  document.getElementById('pfill').style.width = (idx / qzQuestions.length * 100) + '%';
+  document.getElementById('qcur').textContent  = idx + 1;
+
+  /* Meta badges */
+  var bc = q.difficulty==='Easy'?'be':q.difficulty==='Medium'?'bm':'bh';
+  document.getElementById('qcmeta').innerHTML =
+    '<span class="qbadge '+bc+'">'+q.difficulty+'</span>' +
+    '<span class="qbadge bt">'+q.type+'</span>' +
+    '<span class="btag" style="font-size:.6rem">'+q.bloom+'</span>' +
+    '<span class="atag">'+(qzMode==='adaptive'?'🤖 Adaptive':'📌 Fixed')+'</span>';
+
+  document.getElementById('qtext').textContent = q.question;
+
+  /* Answer area */
+  var aa = document.getElementById('aarea');
+  var L = ['A','B','C','D'];
+  if (q.type === 'MCQ' || q.type === 'TF') {
+    var html = '<div class="opts">';
+    for (var j = 0; j < q.options.length; j++) {
+      var ltr = q.type === 'TF' ? (j===0?'T':'F') : L[j];
+      html += '<button class="opt" onclick="pickOpt(this,'+j+')" data-i="'+j+'"><div class="okey">'+ltr+'</div><span>'+q.options[j]+'</span></button>';
+    }
+    html += '</div>';
+    aa.innerHTML = html;
+  } else {
+    aa.innerHTML = '<textarea class="sinp" id="sins" placeholder="Type your answer here..." rows="3"></textarea>';
+  }
+
+  /* Reset feedback */
+  var fb = document.getElementById('fb');
+  fb.className = 'fb';
+  fb.innerHTML = '';
+
+  /* Show submit, hide next — use explicit values */
+  document.getElementById('bsub').style.display = 'inline-block';
+  document.getElementById('bnxt').style.display = 'none';
+
+  /* Timer */
+  clearInterval(qzTimer);
+  var td = parseInt(document.getElementById('tsel').value, 10);
+  qzTimeStart = Date.now();
+  if (td > 0) {
+    qzTimeLeft = td;
+    updateTimer();
+    qzTimer = setInterval(function(){
+      qzTimeLeft--;
+      updateTimer();
+      if (qzTimeLeft <= 0) { clearInterval(qzTimer); submitAns(true); }
+    }, 1000);
+  } else {
+    document.getElementById('qtmr').textContent = '∞';
+  }
+}
+
+function pickOpt(btn, idx) {
+  document.querySelectorAll('.opt').forEach(function(b){ b.classList.remove('picked'); });
+  btn.classList.add('picked');
+  btn.dataset.pi = idx;
+}
+
+function updateTimer() {
+  var el = document.getElementById('qtmr');
+  var m  = String(Math.floor(qzTimeLeft/60)).padStart(2,'0');
+  var s  = String(qzTimeLeft%60).padStart(2,'0');
+  el.textContent = m + ':' + s;
+  el.className   = 'qtmr' + (qzTimeLeft <= 10 ? ' warn' : '');
+}
+
+/* ============================================================
+   SUBMIT ANSWER — explicit button control + full explanation
+   ============================================================ */
+function submitAns(auto) {
+  auto = !!auto;
+  clearInterval(qzTimer);
+
+  var q   = qzQuestions[qzCurrent];
+  var ts  = Math.round((Date.now() - qzTimeStart) / 1000);
+  var cor = false;
+  var ua  = null;
+
+  if (q.type === 'MCQ' || q.type === 'TF') {
+    var sel = document.querySelector('.opt.picked');
+    if (!sel && !auto) { toast('Please select an answer first.', 'warning'); return; }
+    ua  = sel ? parseInt(sel.getAttribute('data-pi'), 10) : null;
+    cor = (ua === q.correct);
+    /* Mark options */
+    document.querySelectorAll('.opt').forEach(function(b, i){
+      b.disabled = true;
+      if (i === q.correct) b.classList.add('correct');
+      else if (i === ua && !cor) b.classList.add('wrong');
+    });
+  } else {
+    var si = document.getElementById('sins');
+    ua = si ? si.value.trim() : '';
+    if (si) si.disabled = true;
+    var kwLow = (q.keyword || '').toLowerCase();
+    cor = (ua.toLowerCase().indexOf(kwLow) >= 0 && ua.length > 3) || ua.length > 20;
+  }
+  if (auto && ua === null) cor = false;
+
+  /* Build full explanation */
+  var ctx = q.sentence.length > 120
+    ? '"' + q.sentence.substring(0,118).trim() + '..."'
+    : '"' + q.sentence + '"';
+
+  var expHTML = '';
+  if (q.type === 'MCQ') {
+    expHTML = '<span class="fb-ans">✔ Correct answer: ' + q.options[q.correct] + '</span>'
+            + '<span class="fb-ctx">📖 Source sentence: ' + ctx + '</span>';
+  } else if (q.type === 'TF') {
+    expHTML = '<span class="fb-ans">✔ Correct answer: ' + q.options[q.correct] + '</span>'
+            + '<span class="fb-ctx">📖 Based on: ' + ctx + '</span>';
+  } else if (q.type === 'Fill') {
+    expHTML = '<span class="fb-ans">✔ Missing word: <em>' + q.answer + '</em></span>'
+            + '<span class="fb-ctx">📖 Original sentence: ' + ctx + '</span>';
+  } else {
+    expHTML = '<span class="fb-ans">✔ Model answer: ' + q.answer + '</span>'
+            + '<span class="fb-ctx">📖 Based on: ' + ctx + '</span>';
+  }
+
+  var fb = document.getElementById('fb');
+  if (cor) {
+    fb.className = 'fb ok on';
+    /* for MCQ/TF we just say Correct; for open-ended also show the answer */
+    fb.innerHTML = '<strong>✅ Correct!</strong>'
+      + ((q.type === 'Fill' || q.type === 'Short') ? expHTML : '');
+  } else {
+    fb.className = 'fb no on';
+    fb.innerHTML = '<strong>❌ ' + (auto ? 'Time up — ' : 'Wrong answer — ') + '</strong>' + expHTML;
+  }
+
+  /* Record stats */
+  qzAnswers.push({ correct:cor, time:ts, difficulty:q.difficulty, question:q.question });
+  qzTimes.push(ts);
+  stats.ans++;
+  if (cor) stats.cor++;
+  stats.byDiff[q.difficulty].t++;
+  if (cor) stats.byDiff[q.difficulty].c++;
+  document.getElementById('ss-a').textContent   = stats.ans;
+  document.getElementById('ss-acc').textContent = Math.round(stats.cor / stats.ans * 100) + '%';
+
+  /* BUTTON SWAP — explicit inline styles */
+  document.getElementById('bsub').style.display = 'none';
+  document.getElementById('bnxt').style.display = 'inline-block';
+  document.getElementById('bnxt').textContent   =
+    (qzCurrent < qzQuestions.length - 1) ? 'Next Question →' : 'Finish Quiz →';
+}
+
+function nextQ() {
+  qzCurrent++;
+  if (qzCurrent >= qzQuestions.length) { endQuiz(); return; }
+  loadQuestion(qzCurrent);
+}
+
+function endQuiz() {
+  clearInterval(qzTimer);
+  stats.qz++;
+  document.getElementById('qactive').classList.remove('on');
+  document.getElementById('ss-qz').textContent = stats.qz;
+
+  var tot = qzAnswers.length;
+  var cor = qzAnswers.filter(function(a){ return a.correct; }).length;
+  var acc = tot ? Math.round(cor/tot*100) : 0;
+  var avg = qzTimes.length ? Math.round(qzTimes.reduce(function(a,b){return a+b;},0)/qzTimes.length) : 0;
+
+  document.getElementById('rscore').textContent = cor + '/' + tot;
+  document.getElementById('racc').textContent   = acc + '%';
+  document.getElementById('ravgt').textContent  = avg + 's';
+  document.getElementById('rem').textContent    = acc>=80?'🎉':acc>=60?'👍':'📚';
+  document.getElementById('rtitle').textContent = acc>=80?'Excellent Work!':acc>=60?'Good Effort!':'Keep Practicing!';
+  document.getElementById('rsub').textContent   = acc>=80?'Outstanding performance!':acc>=60?'You\'re on the right track!':'Review the material and try again.';
+
+  var breakHTML = '<div style="display:flex;flex-direction:column;gap:8px">';
+  ['Easy','Medium','Hard'].forEach(function(d){
+    var da = qzAnswers.filter(function(a){ return a.difficulty === d; });
+    if (!da.length) return;
+    var c = da.filter(function(a){ return a.correct; }).length;
+    var p = Math.round(c/da.length*100);
+    var col = d==='Easy'?'var(--cyan)':d==='Medium'?'var(--amber)':'var(--coral)';
+    breakHTML += '<div style="display:flex;align-items:center;gap:10px;font-size:.79rem">'
+      + '<span style="width:50px;color:'+col+';font-weight:700;font-family:\'JetBrains Mono\',monospace">'+d+'</span>'
+      + '<div style="flex:1;background:var(--p4);height:5px;border-radius:3px;overflow:hidden">'
+      + '<div style="height:100%;width:'+p+'%;background:'+col+';transition:width 1s ease;border-radius:3px"></div>'
+      + '</div>'
+      + '<span style="font-family:\'JetBrains Mono\',monospace;font-size:.68rem;color:var(--tx3);width:38px;text-align:right">'+c+'/'+da.length+'</span>'
+      + '</div>';
+  });
+  breakHTML += '</div>';
+  document.getElementById('rbreak').innerHTML = breakHTML;
+  document.getElementById('rscreen').classList.add('on');
+
+  saveQuizSessionToBackend(tot, cor, acc);
+
+  updAnalytics(); updHistory(); updDiffProg();
+}
+
+function saveQuizSessionToBackend(total, correct, percentage) {
+  fetch('/api/session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      total_questions: total,
+      correct_answers: correct,
+      percentage: percentage,
+      difficulty_filter: lastGeneratedDifficulty || 'Adaptive',
+      input_type: lastInputType || 'Text'
+    })
+  })
+  .then(function(res){ return res.json(); })
+  .then(function(data){
+    if (!data.ok) return;
+    if (document.getElementById('page-previous').classList.contains('active')) {
+      loadPreviousDashboard(true);
+    }
+  })
+  .catch(function(){ /* ignore save failures silently for quiz UX */ });
+}
+
+function difficultyPillClass(pct) {
+  if (pct >= 75) return 'pill good';
+  if (pct >= 50) return 'pill ok';
+  return 'pill low';
+}
+
+function formatSqlDate(raw) {
+  if (!raw) return '—';
+  var asIso = raw.replace(' ', 'T');
+  var dt = new Date(asIso);
+  if (Number.isNaN(dt.getTime())) return raw;
+  return dt.toLocaleString();
+}
+
+function renderPreviousTable() {
+  var body = document.getElementById('prev-table-body');
+  if (!body) return;
+
+  var query = (document.getElementById('prev-search') || { value: '' }).value.trim().toLowerCase();
+  var diffFilter = (document.getElementById('prev-diff-filter') || { value: 'All' }).value;
+
+  var filtered = previousSessions.filter(function(s) {
+    var mode = (s.difficulty_filter || 'All');
+    var input = (s.input_type || 'Unknown');
+    var text = (mode + ' ' + input).toLowerCase();
+    var diffOk = diffFilter === 'All' || mode === diffFilter;
+    var qOk = !query || text.indexOf(query) >= 0;
+    return diffOk && qOk;
+  });
+
+  if (!filtered.length) {
+    body.innerHTML = '<tr><td colspan="6" class="pempty">No matching records for current filters.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = filtered.map(function(s){
+    var pct = Number(s.percentage || 0);
+    var cls = difficultyPillClass(pct);
+    var pctWidth = Math.max(0, Math.min(100, Math.round(pct)));
+    return '<tr>'
+      + '<td class="hid">#' + s.id + '</td>'
+      + '<td class="hscore">' + s.correct_answers + '/' + s.total_questions + '</td>'
+      + '<td>'
+      +   '<div class="hpc">'
+      +     '<div class="hbar"><div class="hfill" style="width:' + pctWidth + '%"></div></div>'
+      +     '<span class="hpctxt"><span class="' + cls + '">' + pctWidth + '%</span></span>'
+      +   '</div>'
+      + '</td>'
+      + '<td><span class="hmode">' + (s.difficulty_filter || 'All') + '</span></td>'
+      + '<td class="hinpt">' + (s.input_type || 'Unknown') + '</td>'
+      + '<td class="hdate">' + formatSqlDate(s.created_at || '') + '</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function loadPreviousDashboard(force) {
+  var limit = Number((document.getElementById('prev-limit') || { value: 20 }).value || 20);
+  fetch('/api/sessions?limit=' + encodeURIComponent(limit))
+    .then(function(res){ return res.json(); })
+    .then(function(data){
+      if (!data.sessions) throw new Error('No session data returned');
+
+      var sessions = data.sessions;
+      previousSessions = sessions.slice();
+      var attempts = sessions.length;
+      var best = 0;
+      var avg = 0;
+      var lastMode = '—';
+
+      if (attempts > 0) {
+        best = Math.max.apply(null, sessions.map(function(s){ return Number(s.percentage || 0); }));
+        avg = sessions.reduce(function(acc, s){ return acc + Number(s.percentage || 0); }, 0) / attempts;
+        lastMode = sessions[0].difficulty_filter || 'All';
+      }
+
+      document.getElementById('pk-attempts').textContent = attempts;
+      document.getElementById('pk-best').textContent = Math.round(best) + '%';
+      document.getElementById('pk-avg').textContent = Math.round(avg) + '%';
+      document.getElementById('pk-last').textContent = lastMode;
+
+      renderPreviousTable();
+    })
+    .catch(function(err){
+      if (force) toast('Could not load previous dashboard: ' + err.message, 'warning');
+    });
+}
+
+function restartQuiz() {
+  document.getElementById('rscreen').classList.remove('on');
+  document.getElementById('qactive').classList.remove('on');
+  document.getElementById('qsw').classList.remove('hide');
+}
+
+/* ============================================================
+   ANALYTICS
+   ============================================================ */
+function updAnalytics() {
+  var tot = questions.length;
+  document.getElementById('k-q').textContent  = tot;
+  document.getElementById('dcv').textContent  = tot;
+  var e = questions.filter(function(q){ return q.difficulty==='Easy'; }).length;
+  var m = questions.filter(function(q){ return q.difficulty==='Medium'; }).length;
+  var h = questions.filter(function(q){ return q.difficulty==='Hard'; }).length;
+  document.getElementById('le').textContent = e;
+  document.getElementById('lm').textContent = m;
+  document.getElementById('lh').textContent = h;
+  if (tot > 0) {
+    var C = 239, ea = e/tot*C, ma = m/tot*C, ha = h/tot*C;
+    document.getElementById('dc-e').style.strokeDasharray = ea + ' ' + C;
+    document.getElementById('dc-e').style.strokeDashoffset = 0;
+    document.getElementById('dc-m').style.strokeDasharray = ma + ' ' + C;
+    document.getElementById('dc-m').style.strokeDashoffset = -ea;
+    document.getElementById('dc-h').style.strokeDasharray = ha + ' ' + C;
+    document.getElementById('dc-h').style.strokeDashoffset = -(ea+ma);
+  }
+  if (stats.ans > 0) {
+    document.getElementById('k-acc').textContent   = Math.round(stats.cor/stats.ans*100) + '%';
+    document.getElementById('k-acc-d').textContent = stats.cor + ' of ' + stats.ans + ' correct';
+    var at = qzTimes.length ? Math.round(qzTimes.reduce(function(a,b){return a+b;},0)/qzTimes.length) : 0;
+    document.getElementById('k-time').textContent  = at + 's';
+  }
+  document.getElementById('k-qz').textContent = stats.qz;
+  [['e','Easy'],['m','Medium'],['h','Hard']].forEach(function(p){
+    var sd = stats.byDiff[p[1]];
+    var pct = sd.t ? Math.round(sd.c/sd.t*100) : 0;
+    document.getElementById('bf-'+p[0]).style.height   = pct + '%';
+    document.getElementById('bv-'+p[0]).textContent = pct + '%';
+  });
+  var ap = stats.ans ? Math.round(stats.cor/stats.ans*100) : 0;
+  document.getElementById('bf-a').style.height   = ap + '%';
+  document.getElementById('bv-a').textContent = ap + '%';
+}
+
+function updHistory() {
+  var list = document.getElementById('hlist');
+  var last = qzAnswers.slice(-10).reverse();
+  if (!last.length) return;
+  var html = '';
+  last.forEach(function(a, i){
+    html += '<div class="hi">'
+      + '<div class="hn">'+(i+1)+'</div>'
+      + '<div class="hq">'+a.question.substring(0,84)+(a.question.length>84?'...':'')+'</div>'
+      + '<div class="ht">'+a.time+'s</div>'
+      + '<div class="hr '+(a.correct?'hc':'hw')+'">'+(a.correct?'✓ Correct':'✗ Wrong')+'</div>'
+      + '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function updDiffProg() {
+  var w = document.getElementById('dpwrap');
+  if (!qzDiffProg.length) return;
+  var col = { Easy:'var(--cyan)', Medium:'var(--amber)', Hard:'var(--coral)' };
+  var html = '';
+  qzDiffProg.forEach(function(d, i){
+    html += '<div class="dpn">'
+      + '<div class="dpb" style="border-color:'+col[d]+';color:'+col[d]+'">'+d[0]+'</div>'
+      + (i < qzDiffProg.length-1 ? '<div class="dpa">›</div>' : '')
+      + '</div>';
+  });
+  w.innerHTML = html;
+}
+
+/* ============================================================
+   NAVIGATION
+   goPage reads bankFilter — already set before call
+   ============================================================ */
+var PAGE_TITLES = {
+  upload: 'Upload & Generate Questions',
+  qbank:  'Question Bank',
+  quiz:   'Adaptive Quiz',
+  analytics: 'Performance Analytics',
+  previous: 'Previous Dashboard'
+};
+
+function goPage(pg) {
+  /* Switch visible page */
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.getElementById('page-'+pg).classList.add('active');
+
+  /* Highlight sidebar nav */
+  var order = ['upload','qbank','quiz','analytics','previous'];
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
+  var idx = order.indexOf(pg);
+  if (idx >= 0) document.querySelectorAll('.nb')[idx].classList.add('active');
+
+  document.getElementById('tbtitle').textContent = PAGE_TITLES[pg] || pg;
+
+  /* Sync topbar pill to the right context for each page */
+  var dpd  = document.getElementById('dpd');
+  var dlbl = document.getElementById('dlbl');
+  var pillDotMap  = { Easy:'e', Medium:'m', Hard:'h', all:'a', Adaptive:'a' };
+  var pillLblMap  = { Easy:'Easy', Medium:'Medium', Hard:'Hard', all:'All', Adaptive:'Adaptive' };
+
+  if (pg === 'upload') {
+    /* Show the currently selected generation chip */
+    var activeChip = document.querySelector('.dchip.active');
+    var chipDiff   = activeChip ? activeChip.getAttribute('data-d') : 'Adaptive';
+    if (dpd)  dpd.className   = 'dpdot ' + (pillDotMap[chipDiff] || 'a');
+    if (dlbl) dlbl.textContent = pillLblMap[chipDiff] || chipDiff;
+  } else if (pg === 'qbank') {
+    renderBank();   /* uses bankFilter which is already set correctly */
+    /* Pill already synced by filterBank() or the generation flow */
+    if (dpd)  dpd.className   = 'dpdot ' + (pillDotMap[bankFilter] || 'a');
+    if (dlbl) dlbl.textContent = pillLblMap[bankFilter] || bankFilter;
+  } else if (pg === 'quiz') {
+    document.getElementById('nqw').textContent = questions.length ? '' : '⚠️ No questions yet — generate some first!';
+    var modeLabel = { adaptive:'Adaptive', easy:'Easy', medium:'Medium', hard:'Hard' };
+    var modeDot   = { adaptive:'a', easy:'e', medium:'m', hard:'h' };
+    if (dpd)  dpd.className   = 'dpdot ' + (modeDot[qzMode] || 'a');
+    if (dlbl) dlbl.textContent = modeLabel[qzMode] || qzMode;
+  } else if (pg === 'analytics') {
+    updAnalytics(); updHistory(); updDiffProg();
+    if (dpd)  dpd.className   = 'dpdot a';
+    if (dlbl) dlbl.textContent = 'Analytics';
+  } else if (pg === 'previous') {
+    loadPreviousDashboard(false);
+    if (dpd)  dpd.className   = 'dpdot a';
+    if (dlbl) dlbl.textContent = 'Previous';
+  }
+
+  closeSidebar();
+}
+
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
+function updateCC() {
+  var t = document.getElementById('stxt').value;
+  document.getElementById('cch').textContent = t.length.toLocaleString() + ' chars';
+  document.getElementById('ccw').textContent = (t.trim() ? t.trim().split(/\s+/).length : 0).toLocaleString() + ' words';
+}
+
+function handleFile(e) {
+  var f = e.target.files[0];
+  if (!f) return;
+  if (!f.name.match(/\.(txt|text)$/i)) { toast('Please upload a .txt file.', 'warning'); return; }
+  var r = new FileReader();
+  r.onload = function(ev){
+    document.getElementById('stxt').value = ev.target.result;
+    updateCC();
+    var ok = document.getElementById('dzok');
+    ok.textContent = '✅ "' + f.name + '" loaded';
+    ok.style.display = 'block';
+    toast('File loaded!', 'success');
+  };
+  r.readAsText(f);
+}
+
+function loadSample(k) {
+  document.getElementById('stxt').value = SMPL[k] || '';
+  updateCC();
+  toast('Loaded: ' + k.toUpperCase() + ' sample content', 'success');
+}
+
+function toast(msg, type) {
+  type = type || 'info';
+  var icons = { success:'✅', info:'💡', warning:'⚠️' };
+  var c = document.getElementById('twrap');
+  var el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.innerHTML = '<span>' + (icons[type]||'ℹ️') + '</span><span>' + msg + '</span>';
+  c.appendChild(el);
+  setTimeout(function(){
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(18px) scale(.96)';
+    el.style.transition = 'all .25s';
+    setTimeout(function(){ el.remove(); }, 260);
+  }, 3200);
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('on'); document.getElementById('sovl').classList.add('on'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('on'); document.getElementById('sovl').classList.remove('on'); }
+
+/* Drag and drop */
+var dzel = document.getElementById('dz');
+dzel.addEventListener('dragover',  function(e){ e.preventDefault(); dzel.classList.add('over'); });
+dzel.addEventListener('dragleave', function(){ dzel.classList.remove('over'); });
+dzel.addEventListener('drop', function(e){
+  e.preventDefault();
+  dzel.classList.remove('over');
+  var f = e.dataTransfer.files[0];
+  if (f) {
+    try { var dt = new DataTransfer(); dt.items.add(f); document.getElementById('fi').files = dt.files; } catch(ex){}
+    handleFile({ target:{ files:[f] } });
+  }
+});
+
+/* Range live label */
+document.getElementById('qcr').addEventListener('input', function(){
+  document.getElementById('qcrv').textContent = this.value + ' questions';
+});
+
+/* Init */
+updAnalytics();
+</script>
+</body>
+</html>
