@@ -256,14 +256,13 @@ def serve(port: int, open_browser: bool = True) -> None:
 
     os.chdir(root_dir)
     with ReusableTCPServer(("", port), handler) as httpd:
-        url = f"http://127.0.0.1:{port}/{UI_ROUTE}"
+        url = f"http://0.0.0.0:{port}/{UI_ROUTE}"
         legacy_url = f"http://127.0.0.1:{port}/{UI_FILE.name}"
         print(f"Serving UI at: {url}")
         print(f"Legacy URL still works: {legacy_url}")
 
-        if open_browser:
+        if open_browser and not os.environ.get("SPACE_ID"):
             threading.Timer(0.4, lambda: webbrowser.open(url)).start()
-
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
@@ -272,4 +271,7 @@ def serve(port: int, open_browser: bool = True) -> None:
 
 if __name__ == "__main__":
     args = parse_args()
-    serve(port=args.port, open_browser=not args.no_browser)
+    serve(
+        port=int(os.getenv("PORT", args.port)),
+        open_browser=False
+    )
